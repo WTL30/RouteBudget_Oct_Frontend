@@ -1,485 +1,5 @@
-// "use client"
-
-// import { useState, useEffect } from "react"
-// import axios from "axios"
-// import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from "recharts"
-// import Sidebar from "../slidebar/page"
-// import { MdOutlineDirectionsCar, MdOutlineAccountBalanceWallet, MdPerson, MdGpsFixed, MdPayment, MdWarning, MdDescription } from "react-icons/md"
-// import { BsClipboardCheck } from "react-icons/bs"
-// import { FaCar, FaExclamationTriangle, FaFileAlt } from "react-icons/fa"
-// import { motion, useAnimation } from "framer-motion"
-// import { useInView } from "react-intersection-observer"
-// import baseURL from "@/utils/api"
-// import { useRouter } from "next/navigation"
-
-// const AnimatedCounter = ({ value, prefix = "", suffix = "", duration = 1.5 }) => {
-//   const controls = useAnimation()
-//   const [count, setCount] = useState(0)
-//   const [ref, inView] = useInView({ triggerOnce: true })
-
-//   useEffect(() => {
-//     if (inView) {
-//       controls.start({
-//         count: value,
-//         transition: { duration },
-//       })
-//     }
-//   }, [inView, value, controls, duration])
-
-//   return (
-//     <motion.span ref={ref} animate={controls} onUpdate={(latest) => setCount(Math.floor(latest.count))}>
-//       {prefix}
-//       {count}
-//       {suffix}
-//     </motion.span>
-//   )
-// }
-
-// const AccessDeniedModal = () => {
-//   const router = useRouter()
-
-//   const handleClose = () => {
-//     router.push("/")
-//   }
-
-//   return (
-//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-//       <div className="bg-white text-black p-8 rounded-lg shadow-lg max-w-sm w-full">
-//         <h2 className="text-xl font-semibold mb-4">Access Denied</h2>
-//         <p className="mb-6">Your access has been restricted. Please contact the administrator.</p>
-//         <button onClick={handleClose} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">
-//           Close
-//         </button>
-//       </div>
-//     </div>
-//   )
-// }
-
-// const AdminDashboard = () => {
-//   const [stats, setStats] = useState({
-//     totalDrivers: 0,
-//     totalCabs: 0,
-//     assignedCabs: 0,
-//     totalExpenses: 0,
-//     gpsTracking: 0,
-//     fastTagPayments: 0,
-//     eChallan: 0,
-//     documentExpiry: 0,
-//   })
-
-//   const [expenseData, setExpenseData] = useState([])
-//   const [expenseBreakdown, setExpenseBreakdown] = useState([])
-//   const [documentExpiryData, setDocumentExpiryData] = useState([])
-//   const [recentEChallans, setRecentEChallans] = useState([])
-//   const [recentFastTagPayments, setRecentFastTagPayments] = useState([])
-//   const [loading, setLoading] = useState(true)
-//   const [error, setError] = useState(null)
-//   const router = useRouter()
-//   const [showAccessDenied, setShowAccessDenied] = useState(false)
-
-//   useEffect(() => {
-//     const checkUserStatusAndFetchData = async () => {
-//       const token = localStorage.getItem("token")
-//       const id = localStorage.getItem("id")
-
-//       if (!token || !id) {
-//         router.push("/login")
-//         return
-//       }
-
-//       try {
-//         const res = await axios.get(`${baseURL}api/admin/getSubAdmin/${id}`)
-//         if (res.data?.status === "Inactive") {
-//           localStorage.clear()
-//           setShowAccessDenied(true)
-//           return
-//         }
-//       } catch (err) {
-//         console.error("Error checking user status:", err)
-//         router.push("/login")
-//       }
-//     }
-//     checkUserStatusAndFetchData()
-//   }, [router])
-
-//   useEffect(() => {
-//     const fetchDashboardData = async () => {
-//       try {
-//         setLoading(true)
-//         setError(null)
-
-//         const token = localStorage.getItem("token")
-//         if (!token) {
-//           setError("No authentication token found. Please log in.")
-//           return
-//         }
-
-//         const headers = { headers: { Authorization: `Bearer ${token}` } }
-
-//         const [driversRes, cabsRes, assignedCabsRes, expensesRes] = await Promise.allSettled([
-//           axios.get(`${baseURL}api/driver/profile`, headers),
-//           axios.get(`${baseURL}api/cabDetails`, headers),
-//           axios.get(`${baseURL}api/assigncab`, headers),
-//           axios.get(`${baseURL}api/cabs/cabExpensive`, headers),
-//         ])
-
-//         const driversData = driversRes.status === "fulfilled" ? driversRes.value.data : []
-//         const cabsData = cabsRes.status === "fulfilled" ? cabsRes.value.data : []
-//         const assignedCabsData = assignedCabsRes.status === "fulfilled" ? assignedCabsRes.value.data : []
-//         const expensesData = expensesRes.status === "fulfilled" ? expensesRes.value.data?.data || [] : []
-
-//         const currentlyAssignedCabs = assignedCabsData.filter((cab) => cab.status === "assigned")
-//         const totalExpenses = expensesData.reduce((acc, curr) => acc + (curr.totalExpense || 0), 0)
-
-//         // Mock data for new features (replace with actual API calls)
-//         const gpsTrackingActive = Math.floor(cabsData.length * 0.85) // 85% of cabs have GPS tracking
-//         const fastTagPaymentsCount = Math.floor(Math.random() * 50) + 20 // Random between 20-70
-//         const eChallanCount = Math.floor(Math.random() * 15) + 5 // Random between 5-20
-//         const documentExpiryCount = Math.floor(Math.random() * 10) + 2 // Random between 2-12
-
-//         const monthlyExpenseData = expensesData.map((exp, index) => ({
-//           month: exp.cabNumber || `Cab ${index + 1}`,
-//           expense: exp.totalExpense || 0,
-//         }))
-
-//         const aggregatedBreakdown = expensesData.reduce((acc, exp) => {
-//           const breakdown = exp.breakdown || {}
-//           acc.fuel = (acc.fuel || 0) + (breakdown.fuel || 0)
-//           acc.fasttag = (acc.fasttag || 0) + (breakdown.fastTag || breakdown.fasttag || 0)
-//           acc.tyre = (acc.tyre || 0) + (breakdown.tyre || breakdown.tyrePuncture || 0)
-//           acc.other = (acc.other || 0) + (breakdown.other || breakdown.otherProblems || 0)
-//           return acc
-//         }, {})
-
-//         const formattedBreakdown = [
-//           { name: "Fuel", value: aggregatedBreakdown.fuel || 0 },
-//           { name: "FastTag", value: aggregatedBreakdown.fasttag || 0 },
-//           { name: "TyrePuncture", value: aggregatedBreakdown.tyre || 0 },
-//           { name: "OtherProblems", value: aggregatedBreakdown.other || 0 },
-//         ]
-
-//         // Mock data for document expiry
-//         const mockDocumentExpiry = [
-//           { document: "Insurance", expiring: 3, color: "#EF4444" },
-//           { document: "RC", expiring: 1, color: "#F59E0B" },
-//           { document: "Fitness", expiring: 5, color: "#10B981" },
-//           { document: "Permit", expiring: 2, color: "#6366F1" },
-//         ]
-
-//         // Mock data for recent e-challans
-//         const mockRecentEChallans = [
-//           { cabNumber: "MH12AB1234", amount: 500, date: "2024-01-20", violation: "Speed Limit" },
-//           { cabNumber: "MH14CD5678", amount: 1000, date: "2024-01-19", violation: "Signal Jump" },
-//           { cabNumber: "MH09EF9012", amount: 200, date: "2024-01-18", violation: "Parking" },
-//         ]
-
-//         // Mock data for recent FastTag payments
-//         const mockFastTagPayments = [
-//           { cabNumber: "MH12AB1234", amount: 150, date: "2024-01-20", tollPlaza: "Mumbai-Pune Expressway" },
-//           { cabNumber: "MH14CD5678", amount: 85, date: "2024-01-20", tollPlaza: "Bandra-Worli Sea Link" },
-//           { cabNumber: "MH09EF9012", amount: 120, date: "2024-01-19", tollPlaza: "Eastern Express Highway" },
-//         ]
-
-//         setStats({
-//           totalDrivers: driversData.length || 0,
-//           totalCabs: cabsData.length || 0,
-//           assignedCabs: currentlyAssignedCabs.length || 0,
-//           totalExpenses: totalExpenses || 0,
-//           gpsTracking: gpsTrackingActive,
-//           fastTagPayments: fastTagPaymentsCount,
-//           eChallan: eChallanCount,
-//           documentExpiry: documentExpiryCount,
-//         })
-
-//         setExpenseData(monthlyExpenseData)
-//         setExpenseBreakdown(formattedBreakdown)
-//         setDocumentExpiryData(mockDocumentExpiry)
-//         setRecentEChallans(mockRecentEChallans)
-//         setRecentFastTagPayments(mockFastTagPayments)
-//       } catch (error) {
-//         console.error("Error fetching dashboard data:", error)
-//         setError("Failed to fetch dashboard data. Please try again later.")
-//       } finally {
-//         setLoading(false)
-//       }
-//     }
-
-//     fetchDashboardData()
-//   }, [])
-
-//   // Navigation handlers for the new cards
-//   const handleGPSTrackingClick = () => {
-//     router.push("/GPSTracking")
-//   }
-
-//   const handleFastTagPaymentsClick = () => {
-//     router.push("/FastTagPayments")
-//   }
-
-//   const handleEChallanClick = () => {
-//     router.push("/EChallan")
-//   }
-
-//   const handleDocumentExpiryClick = () => {
-//     router.push("/DocumentExpiry")
-//   }
-
-//   const COLORS = ["#6366F1", "#10B981", "#F59E0B", "#EF4444", "#A020F0"]
-
-//   return (
-//     <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 min-h-screen flex text-white">
-//       <Sidebar />
-//       <div className="p-8 mt-20 md:ml-60 sm:mt-0 flex-1">
-//         {showAccessDenied && <AccessDeniedModal />}
-//         <motion.h1
-//           className="text-xl md:text-2xl font-bold mb-4 text-white"
-//           initial={{ opacity: 0, y: -20 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           transition={{ duration: 0.5 }}
-//         >
-//           Admin Dashboard
-//         </motion.h1>
-
-//         {loading && <p className="text-center text-gray-300">Loading dashboard data...</p>}
-//         {error && <p className="text-center text-red-500">{error}</p>}
-
-//         {!loading && !error && (
-//           <>
-//             {/* First Row - Original Stats */}
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-//               {[
-//                 { label: "Total Drivers", value: stats.totalDrivers, icon: <MdPerson size={28} />, color: "bg-blue-600" },
-//                 { label: "Total Cabs", value: stats.totalCabs, icon: <MdOutlineDirectionsCar size={28} />, color: "bg-green-600" },
-//                 { label: "Assigned Cabs", value: stats.assignedCabs, icon: <BsClipboardCheck size={28} />, color: "bg-yellow-600" },
-//                 { label: "Total Expenses", value: stats.totalExpenses, icon: <MdOutlineAccountBalanceWallet size={28} />, prefix: "₹", color: "bg-red-600" },
-//               ].map((card, index) => (
-//                 <motion.div
-//                   key={index}
-//                   className="p-5 bg-gray-800 shadow-lg rounded-lg flex items-center space-x-4 transition-transform transform hover:scale-105 hover:shadow-2xl"
-//                   initial={{ opacity: 0, y: 30 }}
-//                   whileInView={{ opacity: 1, y: 0 }}
-//                   viewport={{ once: true }}
-//                   transition={{ duration: 0.5, delay: index * 0.1 }}
-//                 >
-//                   <div className={`p-4 ${card.color} text-white rounded-full`}>{card.icon}</div>
-//                   <div className="text-white">
-//                     <h2 className="text-lg font-semibold">{card.label}</h2>
-//                     <p className="text-2xl font-bold">
-//                       <AnimatedCounter value={card.value} prefix={card.prefix || ""} />
-//                     </p>
-//                   </div>
-//                 </motion.div>
-//               ))}
-//             </div>
-
-//             {/* Second Row - New Stats with Navigation */}
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-//               {[
-//                 { 
-//                   label: "GPS Tracking", 
-//                   value: stats.gpsTracking, 
-//                   icon: <MdGpsFixed size={28} />, 
-//                   color: "bg-purple-600", 
-//                   suffix: " Active",
-//                   onClick: handleGPSTrackingClick
-//                 },
-//                 { 
-//                   label: "FastTag Payments", 
-//                   value: stats.fastTagPayments, 
-//                   icon: <MdPayment size={28} />, 
-//                   color: "bg-indigo-600", 
-//                   suffix: " Today",
-//                   onClick: handleFastTagPaymentsClick
-//                 },
-//                 { 
-//                   label: "E-Challan (M-Parivahan)", 
-//                   value: stats.eChallan, 
-//                   icon: <MdWarning size={28} />, 
-//                   color: "bg-orange-600", 
-//                   suffix: " Pending",
-//                   onClick: handleEChallanClick
-//                 },
-//                 { 
-//                   label: "Document Expiry", 
-//                   value: stats.documentExpiry, 
-//                   icon: <MdDescription size={28} />, 
-//                   color: "bg-teal-600", 
-//                   suffix: " Expiring",
-//                   onClick: handleDocumentExpiryClick
-//                 }
-//               ].map((card, index) => (
-//                 <motion.div
-//                   key={index}
-//                   className="p-5 bg-gray-800 shadow-lg rounded-lg flex items-center space-x-4 transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer"
-//                   initial={{ opacity: 0, y: 30 }}
-//                   whileInView={{ opacity: 1, y: 0 }}
-//                   viewport={{ once: true }}
-//                   transition={{ duration: 0.5, delay: index * 0.1 }}
-//                   onClick={card.onClick}
-//                 >
-//                   <div className={`p-4 ${card.color} text-white rounded-full`}>{card.icon}</div>
-//                   <div className="text-white">
-//                     <h2 className="text-lg font-semibold">{card.label}</h2>
-//                     <p className="text-2xl font-bold">
-//                       <AnimatedCounter value={card.value} suffix={card.suffix || ""} />
-//                     </p>
-//                   </div>
-//                 </motion.div>
-//               ))}
-//             </div>
-
-//             {/* Charts Section */}
-//             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-//               {/* Expense Chart */}
-//               <motion.div
-//                 className="p-6 bg-gray-800 shadow-lg rounded-lg"
-//                 initial={{ opacity: 0, x: -50 }}
-//                 whileInView={{ opacity: 1, x: 0 }}
-//                 viewport={{ once: true }}
-//                 transition={{ duration: 0.6 }}
-//               >
-//                 <h3 className="text-lg font-semibold mb-4 text-white">Monthly Expenses by Cab</h3>
-//                 <ResponsiveContainer width="100%" height={300}>
-//                   <BarChart data={expenseData}>
-//                     <XAxis dataKey="month" tick={{ fill: '#ffffff', fontSize: 12 }} />
-//                     <YAxis tick={{ fill: '#ffffff', fontSize: 12 }} />
-//                     <Tooltip
-//                       contentStyle={{ backgroundColor: '#374151', border: 'none', borderRadius: '8px' }}
-//                       labelStyle={{ color: '#ffffff' }}
-//                     />
-//                     <Bar dataKey="expense" fill="#6366F1" radius={[4, 4, 0, 0]} />
-//                   </BarChart>
-//                 </ResponsiveContainer>
-//               </motion.div>
-
-//               {/* Expense Breakdown Pie Chart */}
-//               <motion.div
-//                 className="p-6 bg-gray-800 shadow-lg rounded-lg"
-//                 initial={{ opacity: 0, x: 50 }}
-//                 whileInView={{ opacity: 1, x: 0 }}
-//                 viewport={{ once: true }}
-//                 transition={{ duration: 0.6 }}
-//               >
-//                 <h3 className="text-lg font-semibold mb-4 text-white">Expense Breakdown</h3>
-//                 <ResponsiveContainer width="100%" height={300}>
-//                   <PieChart>
-//                     <Pie
-//                       data={expenseBreakdown}
-//                       cx="50%"
-//                       cy="50%"
-//                       labelLine={false}
-//                       outerRadius={80}
-//                       fill="#8884d8"
-//                       dataKey="value"
-//                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-//                     >
-//                       {expenseBreakdown.map((entry, index) => (
-//                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-//                       ))}
-//                     </Pie>
-//                     <Tooltip
-//                       contentStyle={{ backgroundColor: '#374151', border: 'none', borderRadius: '8px' }}
-//                     />
-//                   </PieChart>
-//                 </ResponsiveContainer>
-//               </motion.div>
-//             </div>
-
-//             {/* Document Expiry Chart */}
-//             <motion.div
-//               className="p-6 bg-gray-800 shadow-lg rounded-lg mb-8"
-//               initial={{ opacity: 0, y: 50 }}
-//               whileInView={{ opacity: 1, y: 0 }}
-//               viewport={{ once: true }}
-//               transition={{ duration: 0.6 }}
-//             >
-//               <h3 className="text-lg font-semibold mb-4 text-white">Document Expiry Status</h3>
-//               <ResponsiveContainer width="100%" height={300}>
-//                 <BarChart data={documentExpiryData} layout="horizontal">
-//                   <XAxis type="number" tick={{ fill: '#ffffff', fontSize: 12 }} />
-//                   <YAxis dataKey="document" type="category" tick={{ fill: '#ffffff', fontSize: 12 }} />
-//                   <Tooltip
-//                     contentStyle={{ backgroundColor: '#374151', border: 'none', borderRadius: '8px' }}
-//                     labelStyle={{ color: '#ffffff' }}
-//                   />
-//                   <Bar dataKey="expiring" fill="#F59E0B" radius={[0, 4, 4, 0]} />
-//                 </BarChart>
-//               </ResponsiveContainer>
-//             </motion.div>
-
-//             {/* Recent Activities */}
-//             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-//               {/* Recent E-Challans */}
-//               <motion.div
-//                 className="p-6 bg-gray-800 shadow-lg rounded-lg"
-//                 initial={{ opacity: 0, y: 50 }}
-//                 whileInView={{ opacity: 1, y: 0 }}
-//                 viewport={{ once: true }}
-//                 transition={{ duration: 0.6 }}
-//               >
-//                 <h3 className="text-lg font-semibold mb-4 text-white flex items-center">
-//                   <MdWarning className="mr-2 text-orange-500" /> Recent E-Challans
-//                 </h3>
-//                 <div className="space-y-3">
-//                   {recentEChallans.map((challan, index) => (
-//                     <div key={index} className="p-3 bg-gray-700 rounded-lg">
-//                       <div className="flex justify-between items-center">
-//                         <div>
-//                           <p className="font-semibold text-white">{challan.cabNumber}</p>
-//                           <p className="text-sm text-gray-300">{challan.violation}</p>
-//                           <p className="text-xs text-gray-400">{challan.date}</p>
-//                         </div>
-//                         <div className="text-right">
-//                           <p className="font-bold text-red-400">₹{challan.amount}</p>
-//                         </div>
-//                       </div>
-//                     </div>
-//                   ))}
-//                 </div>
-//               </motion.div>
-
-//               {/* Recent FastTag Payments */}
-//               <motion.div
-//                 className="p-6 bg-gray-800 shadow-lg rounded-lg"
-//                 initial={{ opacity: 0, y: 50 }}
-//                 whileInView={{ opacity: 1, y: 0 }}
-//                 viewport={{ once: true }}
-//                 transition={{ duration: 0.6, delay: 0.1 }}
-//               >
-//                 <h3 className="text-lg font-semibold mb-4 text-white flex items-center">
-//                   <MdPayment className="mr-2 text-indigo-500" /> Recent FastTag Payments
-//                 </h3>
-//                 <div className="space-y-3">
-//                   {recentFastTagPayments.map((payment, index) => (
-//                     <div key={index} className="p-3 bg-gray-700 rounded-lg">
-//                       <div className="flex justify-between items-center">
-//                         <div>
-//                           <p className="font-semibold text-white">{payment.cabNumber}</p>
-//                           <p className="text-sm text-gray-300">{payment.tollPlaza}</p>
-//                           <p className="text-xs text-gray-400">{payment.date}</p>
-//                         </div>
-//                         <div className="text-right">
-//                           <p className="font-bold text-green-400">₹{payment.amount}</p>
-//                         </div>
-//                       </div>
-//                     </div>
-//                   ))}
-//                 </div>
-//               </motion.div>
-//             </div>
-//           </>
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
-
-// export default AdminDashboard
-
-
 
 // "use client"
-
 // import { useState, useEffect } from "react"
 // import axios from "axios"
 // import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
@@ -636,19 +156,70 @@
 //   const [documentExpiryData, setDocumentExpiryData] = useState([])
 //   const [recentEChallans, setRecentEChallans] = useState([])
 //   const [recentFastTagPayments, setRecentFastTagPayments] = useState([])
-//   const [recentServicing, setRecentServicing] = useState([]) // New state for actual servicing data
-//   const [drivers, setDrivers] = useState([]) // New state for drivers data
-//   const [assignments, setAssignments] = useState([]) // New state for assignments data
+//   const [recentServicing, setRecentServicing] = useState([])
+//   const [drivers, setDrivers] = useState([])
+//   const [assignments, setAssignments] = useState([])
 //   const [loading, setLoading] = useState(true)
 //   const [error, setError] = useState(null)
 //   const router = useRouter()
 //   const [isDriverModel, setIsDriverModel] = useState(false)
 //   const [showAccessDenied, setShowAccessDenied] = useState(false)
 //   const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false)
+//   const [subAdminData, setSubAdminData] = useState(null)
+//   const [trialTimeRemaining, setTrialTimeRemaining] = useState({
+//     days: 0,
+//     hours: 0,
+//     minutes: 0,
+//     seconds: 0,
+//     totalMs: 0,
+//   })
+//   const [showTrialCountdown, setShowTrialCountdown] = useState(false)
 
 //   // Coming Soon Modal State
 //   const [showComingSoonModal, setShowComingSoonModal] = useState(false)
 //   const [selectedFeature, setSelectedFeature] = useState("")
+
+//   useEffect(() => {
+//     let interval = null
+
+//     if (showTrialCountdown && subAdminData?.subscription?.endDate) {
+//       interval = setInterval(() => {
+//         const now = new Date().getTime()
+//         const endTime = new Date(subAdminData.subscription.endDate).getTime()
+//         const timeDiff = endTime - now
+
+//         if (timeDiff > 0) {
+//           const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+//           const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+//           const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+//           const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000)
+
+//           setTrialTimeRemaining({
+//             days,
+//             hours,
+//             minutes,
+//             seconds,
+//             totalMs: timeDiff,
+//           })
+//         } else {
+//           // Subscription has ended
+//           setTrialTimeRemaining({
+//             days: 0,
+//             hours: 0,
+//             minutes: 0,
+//             seconds: 0,
+//             totalMs: 0,
+//           })
+//         }
+//       }, 1000)
+//     }
+
+//     return () => {
+//       if (interval) {
+//         clearInterval(interval)
+//       }
+//     }
+//   }, [showTrialCountdown, subAdminData?.subscription?.endDate])
 
 //   useEffect(() => {
 //     const checkUserStatusAndFetchData = async () => {
@@ -661,10 +232,58 @@
 
 //       try {
 //         const res = await axios.get(`${baseURL}api/admin/getSubAdmin/${id}`)
-//         if (res.data?.status === "Inactive") {
+
+//         if (res.data?.subAdmin?.status === "Inactive") {
 //           localStorage.clear()
 //           setShowAccessDenied(true)
 //           return
+//         }
+
+//         const responseData = res.data
+//         setSubAdminData(responseData)
+
+//         if (responseData.subscription && responseData.subscription.endDate) {
+//           // Show countdown for both trial and paid subscriptions
+//           if (
+//             responseData.subAdmin?.subscriptionType === "trial" ||
+//             responseData.subAdmin?.subscriptionType === "paid"
+//           ) {
+//             setShowTrialCountdown(true)
+
+//             // Calculate initial time remaining
+//             const now = new Date().getTime()
+//             const endTime = new Date(responseData.subscription.endDate).getTime()
+//             const timeDiff = endTime - now
+
+//             if (timeDiff > 0) {
+//               const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+//               const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+//               const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+//               const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000)
+
+//               setTrialTimeRemaining({
+//                 days,
+//                 hours,
+//                 minutes,
+//                 seconds,
+//                 totalMs: timeDiff,
+//               })
+//             } else {
+//               // Subscription has ended
+//               setTrialTimeRemaining({
+//                 days: 0,
+//                 hours: 0,
+//                 minutes: 0,
+//                 seconds: 0,
+//                 totalMs: 0,
+//               })
+//             }
+//           } else {
+//             setShowTrialCountdown(false)
+//           }
+//         } else {
+//           // No subscription data found
+//           setShowTrialCountdown(false)
 //         }
 //       } catch (err) {
 //         console.error("Error checking user status:", err)
@@ -677,12 +296,13 @@
 
 //   useEffect(() => {
 //     const fetchDashboardData = async () => {
+//       setLoading(true)
+//       setError(null)
+
 //       try {
-//         setLoading(true)
-//         setError(null)
 //         const token = localStorage.getItem("token")
 //         if (!token) {
-//           setError("No authentication token found. Please log in.")
+//           setError("Authentication token not found. Please log in again.")
 //           return
 //         }
 
@@ -693,57 +313,63 @@
 //           axios.get(`${baseURL}api/cabDetails`, headers),
 //           axios.get(`${baseURL}api/assigncab`, headers),
 //           axios.get(`${baseURL}api/cabs/cabExpensive`, headers),
-//           axios.get(`${baseURL}api/servicing`, headers), // Fetch actual servicing data
+//           axios.get(`${baseURL}api/servicing`, headers),
 //         ])
-//         console.log("Assigned cabs response:", assignedCabsRes.value.data.assignments)
+
 //         // Safe data extraction with proper error handling
-//         const driversData = driversRes.status === "fulfilled" && Array.isArray(driversRes.value.data)
-//           ? driversRes.value.data
-//           : []
+//         const driversData =
+//           driversRes.status === "fulfilled" && Array.isArray(driversRes.value.data) ? driversRes.value.data : []
 
-//         const cabsData = cabsRes.status === "fulfilled" && Array.isArray(cabsRes.value.data)
-//           ? cabsRes.value.data
-//           : []
+//         const cabsData = cabsRes.status === "fulfilled" && Array.isArray(cabsRes.value.data) ? cabsRes.value.data : []
 
-//         const assignedCabsData = assignedCabsRes.status === "fulfilled" && Array.isArray(assignedCabsRes.value.data.assignments)
-//           ? assignedCabsRes.value.data.assignments
-//           : []
+//         let assignedCabsData = []
+//         if (assignedCabsRes.status === "fulfilled") {
+//           const responseData = assignedCabsRes.value.data
+//           if (Array.isArray(responseData)) {
+//             assignedCabsData = responseData
+//           } else if (responseData && Array.isArray(responseData.assignments)) {
+//             assignedCabsData = responseData.assignments
+//           } else if (responseData && Array.isArray(responseData.data)) {
+//             assignedCabsData = responseData.data
+//           }
+//         }
 
-//         const expensesData = expensesRes.status === "fulfilled" && expensesRes.value.data?.data && Array.isArray(expensesRes.value.data.data)
-//           ? expensesRes.value.data.data
-//           : []
+//         const expensesData =
+//           expensesRes.status === "fulfilled" &&
+//           expensesRes.value.data?.data &&
+//           Array.isArray(expensesRes.value.data.data)
+//             ? expensesRes.value.data.data
+//             : []
 
-//         const servicingData = servicingRes.status === "fulfilled" && servicingRes.value.data?.services && Array.isArray(servicingRes.value.data.services)
-//           ? servicingRes.value.data.services
-//           : []
+//         const servicingData =
+//           servicingRes.status === "fulfilled" &&
+//           servicingRes.value.data?.services &&
+//           Array.isArray(servicingRes.value.data.services)
+//             ? servicingRes.value.data.services
+//             : []
 
 //         // Store drivers and assignments for servicing data processing
 //         setDrivers(driversData)
-//         console.log("Assigned cabs data:", assignedCabsData)
 //         setAssignments(assignedCabsData)
 
-//         // Now safely filter the assignedCabsData since we've ensured it's an array
-//         const currentlyAssignedCabs = assignedCabsData.filter((cab) => cab.status === "assigned")
+//         const currentlyAssignedCabs = assignedCabsData.filter((cab) => {
+//           const status = cab.status?.toLowerCase?.() || ""
+//           return status === "assigned" || status === "active" || status === "in-use"
+//         })
+
 //         const totalExpenses = expensesData.reduce((acc, curr) => acc + (curr.totalExpense || 0), 0)
 
 //         // Process servicing data to merge with driver and cab information
 //         const processedServicing = servicingData.map((service) => {
-//           // const assignment = assignedCabsData.find((a) => a.cab?._id === service.cab?._id)
 //           const assignment = assignedCabsData.find((a) => a.cab?.id === service.cabId || a.cabId === service.cabId)
 
 //           let serviceDriver = service.Driver
-
 //           if (!serviceDriver || typeof serviceDriver === "string") {
 //             const driverId = service.driver || service.driverId
 //             serviceDriver = driversData.find((d) => d.id === driverId) || assignment?.driver
 //           }
 //           const serviceCab = service.CabDetail || assignment?.cab
 
-//           // return {
-//           //   ...service,
-//           //   cab: service.cab || assignment?.cab,
-//           //   driver: serviceDriver,
-//           // }
 //           return {
 //             ...service,
 //             cab: serviceCab,
@@ -758,11 +384,11 @@
 
 //         setRecentServicing(recentServicingData)
 
-//         // Mock data for new features (replace with actual API calls)
-//         const gpsTrackingActive = Math.floor(cabsData.length * 0.85) // 85% of cabs have GPS tracking
-//         const fastTagPaymentsCount = Math.floor(Math.random() * 50) + 20 // Random between 20-70
-//         const eChallanCount = Math.floor(Math.random() * 15) + 5 // Random between 5-20
-//         const documentExpiryCount = Math.floor(Math.random() * 10) + 2 // Random between 2-12
+//         // Mock data for new features
+//         const gpsTrackingActive = Math.floor(cabsData.length * 0.85)
+//         const fastTagPaymentsCount = Math.floor(Math.random() * 50) + 20
+//         const eChallanCount = Math.floor(Math.random() * 15) + 5
+//         const documentExpiryCount = Math.floor(Math.random() * 10) + 2
 
 //         const monthlyExpenseData = expensesData.map((exp, index) => ({
 //           month: exp.cabNumber || `Cab ${index + 1}`,
@@ -845,11 +471,6 @@
 //     setSelectedFeature("")
 //   }
 
-
-  // const handleGPSLink=()=>{
-  //   router.push('../GPSTracking')
-  // }
-
 //   // Function to get status badge for servicing
 //   const getStatusBadge = (status) => {
 //     const statusColors = {
@@ -871,6 +492,9 @@
 //     )
 //   }
 
+//   const handleGPSLink = () => {
+//     router.push("../GPSTracking")
+//   }
 //   const COLORS = ["#F59E0B", "#10B981", "#EF4444", "#6366F1", "#8B5CF6"]
 
 //   return (
@@ -895,7 +519,6 @@
 //                 <span>›</span>
 //                 <span>Dashboard</span>
 //               </nav>
-//               <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
 //             </div>
 //             <div className="flex items-center gap-3">
 //               <div className="flex items-center gap-2 ml-4">
@@ -914,6 +537,110 @@
 
 //           {!loading && !error && (
 //             <>
+//               {showTrialCountdown && (
+//                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+//                   {/* Days Container */}
+//                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+//                     <div className="flex items-center justify-between">
+//                       <div>
+//                         <h3 className="text-lg font-semibold text-gray-900 mb-1">Days Left</h3>
+//                         <p className="text-sm text-gray-600">
+//                           {subAdminData?.subAdmin?.subscriptionType === "trial"
+//                             ? "Trial days remaining"
+//                             : "Subscription days remaining"}
+//                         </p>
+//                       </div>
+//                       <FaClock className="text-blue-500 text-2xl" />
+//                     </div>
+//                     <div className="mt-4">
+//                       <div className="text-3xl font-bold text-blue-600">
+//                         {trialTimeRemaining.days} <span className="text-lg font-medium">days</span>
+//                       </div>
+//                     </div>
+//                   </div>
+
+//                   {/* Hours Container */}
+//                   <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+//                     <div className="flex items-center justify-between">
+//                       <div>
+//                         <h3 className="text-lg font-semibold text-gray-900 mb-1">Hours Left</h3>
+//                         <p className="text-sm text-gray-600">
+//                           {subAdminData?.subAdmin?.subscriptionType === "trial"
+//                             ? "Trial hours remaining"
+//                             : "Subscription hours remaining"}
+//                         </p>
+//                       </div>
+//                       <FaClock className="text-indigo-500 text-2xl" />
+//                     </div>
+//                     <div className="mt-4">
+//                       <div className="text-3xl font-bold text-indigo-600">
+//                         {trialTimeRemaining.hours} <span className="text-lg font-medium">hours</span>
+//                       </div>
+//                     </div>
+//                   </div>
+
+//                   {/* Minutes Container */}
+//                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+//                     <div className="flex items-center justify-between">
+//                       <div>
+//                         <h3 className="text-lg font-semibold text-gray-900 mb-1">Minutes Left</h3>
+//                         <p className="text-sm text-gray-600">
+//                           {subAdminData?.subAdmin?.subscriptionType === "trial"
+//                             ? "Trial minutes remaining"
+//                             : "Subscription minutes remaining"}
+//                         </p>
+//                       </div>
+//                       <FaClock className="text-purple-500 text-2xl" />
+//                     </div>
+//                     <div className="mt-4">
+//                       <div className="text-3xl font-bold text-purple-600">
+//                         {trialTimeRemaining.minutes} <span className="text-lg font-medium">min</span>
+//                       </div>
+//                     </div>
+//                   </div>
+
+//                   {/* Seconds Container */}
+//                   <div className="bg-gradient-to-r from-pink-50 to-red-50 border border-pink-200 rounded-lg p-4">
+//                     <div className="flex items-center justify-between">
+//                       <div>
+//                         <h3 className="text-lg font-semibold text-gray-900 mb-1">Seconds Left</h3>
+//                         <p className="text-sm text-gray-600">
+//                           {subAdminData?.subAdmin?.subscriptionType === "trial"
+//                             ? "Trial seconds remaining"
+//                             : "Subscription seconds remaining"}
+//                         </p>
+//                       </div>
+//                       <FaClock className="text-pink-500 text-2xl" />
+//                     </div>
+//                     <div className="mt-4">
+//                       <div className="text-3xl font-bold text-pink-600">
+//                         {trialTimeRemaining.seconds} <span className="text-lg font-medium">sec</span>
+//                       </div>
+//                     </div>
+//                   </div>
+//                 </div>
+//               )}
+
+//               {subAdminData?.subAdmin?.subscriptionType !== "trial" &&
+//                 subAdminData?.subAdmin?.subscriptionType !== "paid" && (
+//                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6 lg:mb-8">
+//                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+//                       <div>
+//                         <h2 className="text-xl font-semibold text-gray-900 mb-2">
+//                           Welcome! Start your free trial today!
+//                         </h2>
+//                         <p className="text-gray-600">Explore all features for free for 7 days.</p>
+//                       </div>
+//                       <button
+//                         onClick={() => router.push("/Subscription")}
+//                         className="bg-yellow-500 text-black px-6 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer hover:bg-yellow-600"
+//                       >
+//                         Start Free Trial
+//                       </button>
+//                     </div>
+//                   </div>
+//                 )}
+
 //               {/* Stats Cards */}
 //               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
 //                 {[
@@ -965,7 +692,7 @@
 //               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
 //                 {/* Recent Servicing Table - Now Dynamic */}
 //                 <div className="xl:col-span-2">
-//                   <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+//                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
 //                     <div className="p-4 lg:p-6 border-b border-gray-200">
 //                       <h3 className="text-lg font-semibold text-gray-900">Recent Servicing</h3>
 //                       <p className="text-sm text-gray-600 mt-1">A log of the most recent services for your fleet.</p>
@@ -1017,7 +744,7 @@
 //                             {recentServicing.map((service, index) => (
 //                               <tr key={service._id || index} className="hover:bg-gray-50">
 //                                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-//                                   {service.cab?.cabNumber || "N/A"}
+//                                   {service.CabsDetail?.cabNumber || "N/A"}
 //                                 </td>
 //                                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600">
 //                                   {service.serviceType || "General Service"}
@@ -1091,7 +818,7 @@
 //                 {[
 //                   {
 //                     label: "GPS Tracking",
-//                     value: stats.totalCabs,
+//                     value: stats.gpsTracking,
 //                     icon: <MdGpsFixed size={20} className="text-purple-600" />,
 //                     suffix: " Active",
 //                     onClick: () => handleGPSLink(),
@@ -1227,11 +954,7 @@
 //             >
 //               ✕
 //             </button>
-//             <AddDriver
-//               isOpen={isAddDriverModalOpen}
-//               onClose={() => setIsAddDriverModalOpen(false)}
-//             //  onDriverAdded={fetchDrivers}
-//             />
+//             <AddDriver isOpen={isAddDriverModalOpen} onClose={() => setIsAddDriverModalOpen(false)} />
 //           </div>
 //         </div>
 //       )}
@@ -1240,6 +963,8 @@
 // }
 
 // export default AdminDashboard
+
+
 
 
 
@@ -1258,14 +983,16 @@ import {
   MdWarning,
   MdDescription,
   MdClose,
+  MdNotifications,
+  MdNotificationsNone,
 } from "react-icons/md"
 import { BsClipboardCheck } from "react-icons/bs"
 import { FaRocket, FaClock } from "react-icons/fa"
-import { motion, useAnimation } from "framer-motion"
+import { motion, useAnimation, AnimatePresence } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 import baseURL from "@/utils/api"
 import { useRouter } from "next/navigation"
-import { Bell, User } from "lucide-react"
+import { Bell, User, X } from "lucide-react"
 import AddDriver from "../DriverDetails/component/AddDriver"
 
 const AnimatedCounter = ({ value, prefix = "", suffix = "", duration = 1.5 }) => {
@@ -1385,6 +1112,108 @@ const ComingSoonModal = ({ isOpen, onClose, featureName }) => {
   )
 }
 
+// Notification Panel Component
+const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, onMarkAllAsRead, loading }) => {
+  if (!isOpen) return null
+
+  const unreadCount = notifications?.filter(notification => !notification.isRead)?.length || 0
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+
+        <motion.div
+          className="absolute right-4 top-16 w-80 max-w-sm bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-hidden"
+          initial={{ opacity: 0, scale: 0.8, x: 20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={{ opacity: 0, scale: 0.8, x: 20 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MdNotifications className="text-yellow-500" size={20} />
+                <h3 className="font-semibold text-gray-900">Notifications</h3>
+                {unreadCount > 0 && (
+                  <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {notifications?.length > 0 && (
+              <button
+                onClick={onMarkAllAsRead}
+                className="text-sm text-yellow-500 hover:text-yellow-600 mt-2 transition-colors"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="max-h-80 overflow-y-auto">
+            {loading ? (
+              <div className="p-6 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading notifications...</p>
+              </div>
+            ) : notifications?.length === 0 ? (
+              <div className="p-6 text-center">
+                <MdNotificationsNone className="mx-auto text-yellow-400 mb-3" size={48} />
+                <p className="text-gray-500 font-medium">No notifications</p>
+                <p className="text-gray-400 text-sm mt-1">You're all caught up!</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {notifications?.map((notification) => (
+                  <motion.div
+                    key={notification.id}
+                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                      }`}
+                    onClick={() => onMarkAsRead(notification.id)}
+                    whileHover={{ x: 2 }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        {/* <h4 className={`text-sm ${!notification.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                          {notification.title}
+                        </h4> */}
+                        <p className={`text-sm mt-1 ${!notification.isRead ? 'text-gray-700' : 'text-gray-500'}`}>
+                          {notification.message}
+                        </p>
+                        {/* <p className="text-xs text-gray-400 mt-2">
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </p> */}
+                      </div>
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 ml-2"></div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalDrivers: 0,
@@ -1401,19 +1230,160 @@ const AdminDashboard = () => {
   const [documentExpiryData, setDocumentExpiryData] = useState([])
   const [recentEChallans, setRecentEChallans] = useState([])
   const [recentFastTagPayments, setRecentFastTagPayments] = useState([])
-  const [recentServicing, setRecentServicing] = useState([]) // New state for actual servicing data
-  const [drivers, setDrivers] = useState([]) // New state for drivers data
-  const [assignments, setAssignments] = useState([]) // New state for assignments data
+  const [recentServicing, setRecentServicing] = useState([])
+  const [drivers, setDrivers] = useState([])
+  const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const router = useRouter()
   const [isDriverModel, setIsDriverModel] = useState(false)
   const [showAccessDenied, setShowAccessDenied] = useState(false)
   const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false)
+  const [subAdminData, setSubAdminData] = useState(null)
+  const [trialTimeRemaining, setTrialTimeRemaining] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    totalMs: 0,
+  })
+  const [showTrialCountdown, setShowTrialCountdown] = useState(false)
 
   // Coming Soon Modal State
   const [showComingSoonModal, setShowComingSoonModal] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState("")
+
+  // Notification states
+  const [notifications, setNotifications] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationLoading, setNotificationLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    setNotificationLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const response = await axios.get(`${baseURL}api/notifications/list`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.data.success) {
+        setNotifications(response.data.notifications || [])
+        // Calculate unread count
+        const unread = response.data.notifications?.filter(notification => !notification.isRead)?.length || 0
+        setUnreadCount(unread)
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error)
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
+
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      // Update local state immediately
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      )
+
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1))
+
+      // Make API call to mark as read on backend (if you have this endpoint)
+      // await axios.patch(`${baseURL}api/notifications/${notificationId}/read`, {}, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // })
+    } catch (error) {
+      console.error("Error marking notification as read:", error)
+      // Revert local state if API call fails
+      fetchNotifications()
+    }
+  }
+
+  // Mark all notifications as read
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      // Update local state immediately
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, isRead: true }))
+      )
+      setUnreadCount(0)
+
+      // Make API call to mark all as read on backend (if you have this endpoint)
+      // await axios.patch(`${baseURL}api/notifications/mark-all-read`, {}, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // })
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error)
+      // Revert local state if API call fails
+      fetchNotifications()
+    }
+  }
+
+  // Handle notification bell click
+  const handleNotificationClick = () => {
+    setShowNotifications(true)
+    if (notifications.length === 0) {
+      fetchNotifications()
+    }
+  }
+
+  useEffect(() => {
+    let interval = null
+
+    if (showTrialCountdown && subAdminData?.subscription?.endDate) {
+      interval = setInterval(() => {
+        const now = new Date().getTime()
+        const endTime = new Date(subAdminData.subscription.endDate).getTime()
+        const timeDiff = endTime - now
+
+        if (timeDiff > 0) {
+          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000)
+
+          setTrialTimeRemaining({
+            days,
+            hours,
+            minutes,
+            seconds,
+            totalMs: timeDiff,
+          })
+        } else {
+          // Subscription has ended
+          setTrialTimeRemaining({
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+            totalMs: 0,
+          })
+        }
+      }, 1000)
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+    }
+  }, [showTrialCountdown, subAdminData?.subscription?.endDate])
 
   useEffect(() => {
     const checkUserStatusAndFetchData = async () => {
@@ -1426,10 +1396,61 @@ const AdminDashboard = () => {
 
       try {
         const res = await axios.get(`${baseURL}api/admin/getSubAdmin/${id}`)
-        if (res.data?.status === "Inactive") {
+
+        if (res.data?.subAdmin?.status === "Inactive") {
           localStorage.clear()
           setShowAccessDenied(true)
           return
+        }
+
+        const responseData = res.data
+        setSubAdminData(responseData)
+
+        // Fetch notifications when component mounts
+        fetchNotifications()
+
+        if (responseData.subscription && responseData.subscription.endDate) {
+          // Show countdown for both trial and paid subscriptions
+          if (
+            responseData.subAdmin?.subscriptionType === "trial" ||
+            responseData.subAdmin?.subscriptionType === "paid"
+          ) {
+            setShowTrialCountdown(true)
+
+            // Calculate initial time remaining
+            const now = new Date().getTime()
+            const endTime = new Date(responseData.subscription.endDate).getTime()
+            const timeDiff = endTime - now
+
+            if (timeDiff > 0) {
+              const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+              const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+              const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+              const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000)
+
+              setTrialTimeRemaining({
+                days,
+                hours,
+                minutes,
+                seconds,
+                totalMs: timeDiff,
+              })
+            } else {
+              // Subscription has ended
+              setTrialTimeRemaining({
+                days: 0,
+                hours: 0,
+                minutes: 0,
+                seconds: 0,
+                totalMs: 0,
+              })
+            }
+          } else {
+            setShowTrialCountdown(false)
+          }
+        } else {
+          // No subscription data found
+          setShowTrialCountdown(false)
         }
       } catch (err) {
         console.error("Error checking user status:", err)
@@ -1439,6 +1460,15 @@ const AdminDashboard = () => {
 
     checkUserStatusAndFetchData()
   }, [router])
+
+  // Periodic notification refresh (optional)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 30000) // Refresh every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -1459,15 +1489,8 @@ const AdminDashboard = () => {
           axios.get(`${baseURL}api/cabDetails`, headers),
           axios.get(`${baseURL}api/assigncab`, headers),
           axios.get(`${baseURL}api/cabs/cabExpensive`, headers),
-          axios.get(`${baseURL}api/servicing`, headers), // Fetch actual servicing data
+          axios.get(`${baseURL}api/servicing`, headers),
         ])
-
-        console.log("servicingresult", servicingRes)
-        console.log("Assigned cabs response:", assignedCabsRes)
-        console.log(
-          "Assigned cabs full data:",
-          assignedCabsRes.status === "fulfilled" ? assignedCabsRes.value.data : "Request failed",
-        )
 
         // Safe data extraction with proper error handling
         const driversData =
@@ -1478,70 +1501,51 @@ const AdminDashboard = () => {
         let assignedCabsData = []
         if (assignedCabsRes.status === "fulfilled") {
           const responseData = assignedCabsRes.value.data
-          console.log("Raw assigned cabs response data:", responseData)
-
-          // Handle different possible response structures
           if (Array.isArray(responseData)) {
             assignedCabsData = responseData
           } else if (responseData && Array.isArray(responseData.assignments)) {
             assignedCabsData = responseData.assignments
           } else if (responseData && Array.isArray(responseData.data)) {
             assignedCabsData = responseData.data
-          } else {
-            console.warn("Unexpected assigned cabs response structure:", responseData)
           }
         }
 
         const expensesData =
           expensesRes.status === "fulfilled" &&
-          expensesRes.value.data?.data &&
-          Array.isArray(expensesRes.value.data.data)
+            expensesRes.value.data?.data &&
+            Array.isArray(expensesRes.value.data.data)
             ? expensesRes.value.data.data
             : []
 
         const servicingData =
           servicingRes.status === "fulfilled" &&
-          servicingRes.value.data?.services &&
-          Array.isArray(servicingRes.value.data.services)
+            servicingRes.value.data?.services &&
+            Array.isArray(servicingRes.value.data.services)
             ? servicingRes.value.data.services
             : []
 
         // Store drivers and assignments for servicing data processing
         setDrivers(driversData)
-        console.log("Processed assigned cabs data:", assignedCabsData)
         setAssignments(assignedCabsData)
 
         const currentlyAssignedCabs = assignedCabsData.filter((cab) => {
           const status = cab.status?.toLowerCase?.() || ""
-          const isAssigned = status === "assigned" || status === "active" || status === "in-use"
-          console.log(
-            `Cab ${cab.id || cab._id || "unknown"} status: "${cab.status}" -> ${isAssigned ? "COUNTED" : "IGNORED"}`,
-          )
-          return isAssigned
+          return status === "assigned" || status === "active" || status === "in-use"
         })
-
-        console.log(`Total assigned cabs found: ${currentlyAssignedCabs.length}`)
 
         const totalExpenses = expensesData.reduce((acc, curr) => acc + (curr.totalExpense || 0), 0)
 
         // Process servicing data to merge with driver and cab information
         const processedServicing = servicingData.map((service) => {
-          // const assignment = assignedCabsData.find((a) => a.cab?._id === service.cab?._id)
           const assignment = assignedCabsData.find((a) => a.cab?.id === service.cabId || a.cabId === service.cabId)
 
           let serviceDriver = service.Driver
-
           if (!serviceDriver || typeof serviceDriver === "string") {
             const driverId = service.driver || service.driverId
             serviceDriver = driversData.find((d) => d.id === driverId) || assignment?.driver
           }
           const serviceCab = service.CabDetail || assignment?.cab
 
-          // return {
-          //   ...service,
-          //   cab: service.cab || assignment?.cab,
-          //   driver: serviceDriver,
-          // }
           return {
             ...service,
             cab: serviceCab,
@@ -1556,11 +1560,11 @@ const AdminDashboard = () => {
 
         setRecentServicing(recentServicingData)
 
-        // Mock data for new features (replace with actual API calls)
-        const gpsTrackingActive = Math.floor(cabsData.length * 0.85) // 85% of cabs have GPS tracking
-        const fastTagPaymentsCount = Math.floor(Math.random() * 50) + 20 // Random between 20-70
-        const eChallanCount = Math.floor(Math.random() * 15) + 5 // Random between 5-20
-        const documentExpiryCount = Math.floor(Math.random() * 10) + 2 // Random between 2-12
+        // Mock data for new features
+        const gpsTrackingActive = Math.floor(cabsData.length * 0.85)
+        const fastTagPaymentsCount = Math.floor(Math.random() * 50) + 20
+        const eChallanCount = Math.floor(Math.random() * 15) + 5
+        const documentExpiryCount = Math.floor(Math.random() * 10) + 2
 
         const monthlyExpenseData = expensesData.map((exp, index) => ({
           month: exp.cabNumber || `Cab ${index + 1}`,
@@ -1608,7 +1612,7 @@ const AdminDashboard = () => {
         setStats({
           totalDrivers: driversData.length || 0,
           totalCabs: cabsData.length || 0,
-          assignedCabs: currentlyAssignedCabs.length || 0, // This should now show the correct count
+          assignedCabs: currentlyAssignedCabs.length || 0,
           totalExpenses: totalExpenses || 0,
           gpsTracking: gpsTrackingActive,
           fastTagPayments: fastTagPaymentsCount,
@@ -1664,8 +1668,8 @@ const AdminDashboard = () => {
     )
   }
 
-  const handleGPSLink=()=>{
-    router.push('../GPSTracking')
+  const handleGPSLink = () => {
+    router.push("../GPSTracking")
   }
   const COLORS = ["#F59E0B", "#10B981", "#EF4444", "#6366F1", "#8B5CF6"]
 
@@ -1682,6 +1686,16 @@ const AdminDashboard = () => {
           featureName={selectedFeature}
         />
 
+        {/* Notification Panel */}
+        <NotificationPanel
+          isOpen={showNotifications}
+          onClose={() => setShowNotifications(false)}
+          notifications={notifications}
+          onMarkAsRead={markNotificationAsRead}
+          onMarkAllAsRead={markAllNotificationsAsRead}
+          loading={notificationLoading}
+        />
+
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 lg:py-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1691,11 +1705,25 @@ const AdminDashboard = () => {
                 <span>›</span>
                 <span>Dashboard</span>
               </nav>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 ml-4">
-                <Bell className="h-5 w-5 text-gray-600" />
+                <button
+                  onClick={handleNotificationClick}
+                  className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <motion.span
+                      className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </motion.span>
+                  )}
+                </button>
                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-gray-600" />
                 </div>
@@ -1710,6 +1738,110 @@ const AdminDashboard = () => {
 
           {!loading && !error && (
             <>
+              {showTrialCountdown && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  {/* Days Container */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Days Left</h3>
+                        <p className="text-sm text-gray-600">
+                          {subAdminData?.subAdmin?.subscriptionType === "trial"
+                            ? "Trial days remaining"
+                            : "Subscription days remaining"}
+                        </p>
+                      </div>
+                      <FaClock className="text-blue-500 text-2xl" />
+                    </div>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold text-blue-600">
+                        {trialTimeRemaining.days} <span className="text-lg font-medium">days</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hours Container */}
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Hours Left</h3>
+                        <p className="text-sm text-gray-600">
+                          {subAdminData?.subAdmin?.subscriptionType === "trial"
+                            ? "Trial hours remaining"
+                            : "Subscription hours remaining"}
+                        </p>
+                      </div>
+                      <FaClock className="text-indigo-500 text-2xl" />
+                    </div>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold text-indigo-600">
+                        {trialTimeRemaining.hours} <span className="text-lg font-medium">hours</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Minutes Container */}
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Minutes Left</h3>
+                        <p className="text-sm text-gray-600">
+                          {subAdminData?.subAdmin?.subscriptionType === "trial"
+                            ? "Trial minutes remaining"
+                            : "Subscription minutes remaining"}
+                        </p>
+                      </div>
+                      <FaClock className="text-purple-500 text-2xl" />
+                    </div>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold text-purple-600">
+                        {trialTimeRemaining.minutes} <span className="text-lg font-medium">min</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seconds Container */}
+                  <div className="bg-gradient-to-r from-pink-50 to-red-50 border border-pink-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Seconds Left</h3>
+                        <p className="text-sm text-gray-600">
+                          {subAdminData?.subAdmin?.subscriptionType === "trial"
+                            ? "Trial seconds remaining"
+                            : "Subscription seconds remaining"}
+                        </p>
+                      </div>
+                      <FaClock className="text-pink-500 text-2xl" />
+                    </div>
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold text-pink-600">
+                        {trialTimeRemaining.seconds} <span className="text-lg font-medium">sec</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {subAdminData?.subAdmin?.subscriptionType !== "trial" &&
+                subAdminData?.subAdmin?.subscriptionType !== "paid" && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6 lg:mb-8">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                          Welcome! Start your free trial today!
+                        </h2>
+                        <p className="text-gray-600">Explore all features for free for 7 days.</p>
+                      </div>
+                      <button
+                        onClick={() => router.push("/Subscription")}
+                        className="bg-yellow-500 text-black px-6 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer hover:bg-yellow-600"
+                      >
+                        Start Free Trial
+                      </button>
+                    </div>
+                  </div>
+                )}
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
                 {[
@@ -1761,7 +1893,7 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 {/* Recent Servicing Table - Now Dynamic */}
                 <div className="xl:col-span-2">
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
                     <div className="p-4 lg:p-6 border-b border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900">Recent Servicing</h3>
                       <p className="text-sm text-gray-600 mt-1">A log of the most recent services for your fleet.</p>
@@ -2023,11 +2155,7 @@ const AdminDashboard = () => {
             >
               ✕
             </button>
-            <AddDriver
-              isOpen={isAddDriverModalOpen}
-              onClose={() => setIsAddDriverModalOpen(false)}
-              //  onDriverAdded={fetchDrivers}
-            />
+            <AddDriver isOpen={isAddDriverModalOpen} onClose={() => setIsAddDriverModalOpen(false)} />
           </div>
         </div>
       )}

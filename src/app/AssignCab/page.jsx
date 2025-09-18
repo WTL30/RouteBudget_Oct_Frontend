@@ -18,6 +18,7 @@
 //   FaRoad,
 //   FaDollarSign,
 //   FaStickyNote,
+//   FaMobileAlt ,
 // } from "react-icons/fa"
 // import baseURL from "@/utils/api"
 // import { useRouter } from "next/navigation"
@@ -384,8 +385,8 @@
 //     const { name, value } = e.target
 //     console.log(`📝 Trip data updated - ${name}:`, value)
 //     // Prevent onChange from overriding Autocomplete input
-//     if (name === "pickupLocation" && !pickupInputRef.current?.value) return
-//     if (name === "dropLocation" && !dropInputRef.current?.value) return
+//     // if (name === "pickupLocation" && !pickupInputRef.current?.value) return
+//     // if (name === "dropLocation" && !dropInputRef.current?.value) return
 //     setTripData((prev) => ({ ...prev, [name]: value }))
 //   }
 
@@ -434,6 +435,7 @@
 //         setCabFormSuccess("Cab added successfully!")
 //         setCabFormData({
 //           cabNumber: "",
+//           imei: "",  
 //           insuranceNumber: "",
 //           insuranceExpiry: "",
 //           registrationNumber: "",
@@ -728,7 +730,7 @@
 //                   <div>
 //                     <label className="block text-sm font-medium text-gray-700 mb-2">
 //                       <FaStickyNote className="inline mr-2" />
-//                       Admin Notess
+//                       Admin Notes
 //                     </label>
 //                     <input
 //                       type="text"
@@ -897,13 +899,9 @@
 //             <form onSubmit={handleAddCabSubmit} encType="multipart/form-data">
 //               {[
 //                 { name: "cabNumber", icon: <FaCar />, placeholder: "Cab Number" },
+//                 { name: "imei", icon: <FaMobileAlt />, placeholder: "IMEI Number" },   // <-- NEW
 //                 { name: "insuranceNumber", icon: <FaClipboardList />, placeholder: "Insurance Number" },
-//                 {
-//                   name: "insuranceExpiry",
-//                   icon: <FaCalendarAlt />,
-//                   placeholder: "Insurance Expiry Date",
-//                   type: "date",
-//                 },
+//                 {name: "insuranceExpiry",icon: <FaCalendarAlt />,placeholder: "Insurance Expiry Date",type: "date",},
 //                 { name: "registrationNumber", icon: <FaClipboardList />, placeholder: "Registration Number" },
 //               ].map(({ name, icon, placeholder, type = "text" }, index) => (
 //                 <div key={index} className="relative mt-4">
@@ -972,7 +970,7 @@ import {
   FaRoad,
   FaDollarSign,
   FaStickyNote,
-  FaMobileAlt ,
+  FaMobileAlt,
 } from "react-icons/fa"
 import baseURL from "@/utils/api"
 import { useRouter } from "next/navigation"
@@ -1364,48 +1362,100 @@ export default function AssignCab() {
     return Object.keys(errors).length === 0
   }
 
-  const handleAddCabSubmit = async (e) => {
-    e.preventDefault()
-    if (!validateCabForm()) return
+  // const handleAddCabSubmit = async (e) => {
+  //   e.preventDefault()
+  //   if (!validateCabForm()) return
 
-    setLoading(true)
-    setCabFormSuccess("")
+  //   setLoading(true)
+  //   setCabFormSuccess("")
+
+  //   try {
+  //     const token = localStorage.getItem("token")
+  //     const formData = new FormData()
+  //     Object.entries(cabFormData).forEach(([key, value]) => {
+  //       formData.append(key, value)
+  //     })
+
+  //     const res = await fetch(`${baseURL}api/cabDetails/add`, {
+  //       method: "PATCH",
+  //       headers: { Authorization: `Bearer ${token}` },
+  //       body: formData,
+  //     })
+
+  //     const data = await res.json()
+  //     if (res.ok) {
+  //       setCabFormSuccess("Cab added successfully!")
+  //       setCabFormData({
+  //         cabNumber: "",
+  //         imei: "",  
+  //         insuranceNumber: "",
+  //         insuranceExpiry: "",
+  //         registrationNumber: "",
+  //         cabImage: null,
+  //         addedBy: localStorage.getItem("id") || "",
+  //       })
+  //       setTimeout(() => setShowAddCabForm(false), 1500)
+  //     } else {
+  //       setCabFormErrors({ apiError: data.error || "Cab Already Exists" })
+  //     }
+  //   } catch (error) {
+  //     setCabFormErrors({ apiError: "Server error, try again later" })
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
+
+  const handleAddCabSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateCabForm()) return;
+
+    setLoading(true);
+    setCabFormSuccess("");
 
     try {
-      const token = localStorage.getItem("token")
-      const formData = new FormData()
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
       Object.entries(cabFormData).forEach(([key, value]) => {
-        formData.append(key, value)
-      })
+        formData.append(key, value);
+      });
 
       const res = await fetch(`${baseURL}api/cabDetails/add`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
+
       if (res.ok) {
-        setCabFormSuccess("Cab added successfully!")
+        setCabFormSuccess("Cab added successfully!");
         setCabFormData({
           cabNumber: "",
-          imei: "",  
+          imei: "",
           insuranceNumber: "",
           insuranceExpiry: "",
           registrationNumber: "",
           cabImage: null,
           addedBy: localStorage.getItem("id") || "",
-        })
-        setTimeout(() => setShowAddCabForm(false), 1500)
+        });
+        setTimeout(() => setShowAddCabForm(false), 1500);
       } else {
-        setCabFormErrors({ apiError: data.error || "Cab Already Exists" })
+        // Handle specific error cases from backend
+        if (res.status === 403) {
+          // Show the exact error message from backend
+          setCabFormErrors({ apiError: data.message || "Access denied" });
+        } else if (res.status === 400) {
+          setCabFormErrors({ apiError: data.message || "Cab Already Exists" });
+        } else {
+          setCabFormErrors({ apiError: data.error || "Failed to add cab" });
+        }
       }
     } catch (error) {
-      setCabFormErrors({ apiError: "Server error, try again later" })
+      setCabFormErrors({ apiError: "Server error, try again later" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -1762,13 +1812,12 @@ export default function AssignCab() {
 
                 {message && (
                   <motion.p
-                    className={`mt-4 text-center font-medium text-sm md:text-base ${
-                      message.startsWith("✅")
+                    className={`mt-4 text-center font-medium text-sm md:text-base ${message.startsWith("✅")
                         ? "text-green-600"
                         : message.startsWith("⚠️")
                           ? "text-yellow-600"
                           : "text-red-600"
-                    }`}
+                      }`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
@@ -1850,7 +1899,7 @@ export default function AssignCab() {
 
             {cabFormSuccess && <p className="text-green-600 text-center mb-4">{cabFormSuccess}</p>}
 
-            <form onSubmit={handleAddCabSubmit} encType="multipart/form-data">
+            {/* <form onSubmit={handleAddCabSubmit} encType="multipart/form-data">
               {[
                 { name: "cabNumber", icon: <FaCar />, placeholder: "Cab Number" },
                 { name: "imei", icon: <FaMobileAlt />, placeholder: "IMEI Number" },   // <-- NEW
@@ -1894,7 +1943,55 @@ export default function AssignCab() {
               >
                 {loading ? "Adding..." : "Add Cab"}
               </button>
+            </form> */}
+
+            <form onSubmit={handleAddCabSubmit} encType="multipart/form-data">
+              {[
+                { name: "cabNumber", icon: <FaCar />, placeholder: "Cab Number" },
+                { name: "imei", icon: <FaMobileAlt />, placeholder: "IMEI Number" },
+                { name: "insuranceNumber", icon: <FaClipboardList />, placeholder: "Insurance Number" },
+                { name: "insuranceExpiry", icon: <FaCalendarAlt />, placeholder: "Insurance Expiry Date", type: "date" },
+                { name: "registrationNumber", icon: <FaClipboardList />, placeholder: "Registration Number" },
+              ].map(({ name, icon, placeholder, type = "text" }, index) => (
+                <div key={index} className="relative mt-4">
+                  <div className="absolute left-3 top-3 text-gray-400">{icon}</div>
+                  <input
+                    type={type}
+                    name={name}
+                    placeholder={placeholder}
+                    min={name === "insuranceExpiry" ? new Date().toISOString().split("T")[0] : undefined}
+                    className="w-full bg-gray-50 text-gray-900 pl-10 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    onChange={handleCabFormChange}
+                    value={cabFormData[name]}
+                  />
+                  {cabFormErrors[name] && <p className="text-red-500 text-sm mt-1">{cabFormErrors[name]}</p>}
+                </div>
+              ))}
+
+              <div className="relative mt-4">
+                <FaUpload className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="file"
+                  name="cabImage"
+                  accept="image/*"
+                  className="w-full bg-gray-50 text-gray-900 p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={handleCabFormChange}
+                />
+                {cabFormErrors.cabImage && <p className="text-red-500 text-sm mt-1">{cabFormErrors.cabImage}</p>}
+              </div>
+
+              {/* Keep apiError here ONLY ONCE - after all fields */}
+              {cabFormErrors.apiError && <p className="text-red-500 text-sm mt-4">{cabFormErrors.apiError}</p>}
+
+              <button
+                type="submit"
+                className="w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg mt-4 font-medium transition-colors"
+                disabled={loading}
+              >
+                {loading ? "Adding..." : "Add Cab"}
+              </button>
             </form>
+
           </motion.div>
         </div>
       )}

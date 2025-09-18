@@ -37,46 +37,103 @@ const Login = () => {
     exit: { opacity: 0, y: -20, scale: 0.95 },
   }
 
+// const handleLogin = async (e) => {
+//     e.preventDefault();
+//     setLoading(true);
+
+//     try {
+//       const res = await axios.post(`${baseURL}api/admin/login`, {
+//         email: email.trim(),
+//         password,
+//       });
+
+//       console.log("Login Response:", res.data); // Debugging
+
+//       if (res.status === 200 && res.data.success) {
+//         const userId = res.data.admin.id; // ✅ Correct ID
+//         localStorage.setItem("token", res.data.token);
+//         localStorage.setItem("id", userId);
+
+//         try {
+//           // ✅ Correct endpoint with ID
+//           const subAdminRes = await axios.get(`${baseURL}api/admin/getSubAdmin/${userId}`);
+
+//           if (subAdminRes.data?.status === "Inactive") {
+//             setIsBlocked(true);
+//             setShowModal(true);
+//           } else {
+//             router.push("/AdminDashboard");
+//           }
+//         } catch (error) {
+//           console.error("Error checking subadmin status:", error);
+//           router.push("/AdminDashboard"); // Default redirect on error
+//         }
+//       } else {
+//         toast.error(res.data.message || "Login failed.");
+//       }
+//     } catch (error) {
+//       toast.error("Invalid credentials or something went wrong.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+
+
 const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault()
+  setLoading(true)
 
-    try {
-      const res = await axios.post(`${baseURL}api/admin/login`, {
-        email: email.trim(),
-        password,
-      });
+  try {
+    const res = await axios.post(`${baseURL}api/admin/login`, {
+      email: email.trim(),
+      password,
+    })
 
-      console.log("Login Response:", res.data); // Debugging
+    console.log("Login Response:", res.data) // Debugging
 
-      if (res.status === 200 && res.data.success) {
-        const userId = res.data.admin.id; // ✅ Correct ID
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("id", userId);
+    if (res.status === 200 && res.data.success) {
+      const userId = res.data.admin.id
+      const token = res.data.token
+      
+      localStorage.setItem("token", token)
+      localStorage.setItem("id", userId)
 
-        try {
-          // ✅ Correct endpoint with ID
-          const subAdminRes = await axios.get(`${baseURL}api/admin/getSubAdmin/${userId}`);
-
-          if (subAdminRes.data?.status === "Inactive") {
-            setIsBlocked(true);
-            setShowModal(true);
-          } else {
-            router.push("/AdminDashboard");
-          }
-        } catch (error) {
-          console.error("Error checking subadmin status:", error);
-          router.push("/AdminDashboard"); // Default redirect on error
-        }
-      } else {
-        toast.error(res.data.message || "Login failed.");
+      // ✅ Check if admin is blocked/inactive
+      if (res.data.admin.status === "Inactive") {
+        setIsBlocked(true)
+        setShowModal(true)
+        return
       }
-    } catch (error) {
-      toast.error("Invalid credentials or something went wrong.");
-    } finally {
-      setLoading(false);
+
+      // ✅ Check subscription status directly from login response
+      const subscription = res.data.subscription
+      console.log("Subscription Data:", subscription) // Debugging
+
+      if (subscription && (subscription.type === "trial" || subscription.type === "paid")) {
+        // Has active subscription - redirect to dashboard
+        router.push("/AdminDashboard")
+      } 
+      else {
+        // No subscription or invalid subscription - redirect to subscription page
+        router.push("/Subscription")
+      }
+      
+    } else {
+      toast.error(res.data.message || "Login failed.")
     }
-  };
+  } catch (error) {
+    console.error("Login error:", error)
+    if (error.response?.status === 401) {
+      toast.error("Invalid email or password.")
+    } else {
+      toast.error("Something went wrong. Please try again.")
+    }
+  } finally {
+    setLoading(false)
+  }
+}
+
 
   const toggleForgotPassword = () => {
     setShowForgotModal(!showForgotModal)
