@@ -1,5 +1,5 @@
 
-// "use client"
+ "use client"
 // import { useState, useEffect } from "react"
 // import axios from "axios"
 // import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
@@ -460,6 +460,22 @@
 //     fetchDashboardData()
 //   }, [])
 
+  // Manual refresh for cash summary
+  const refreshCashSummaryNow = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+      const headers = { headers: { Authorization: `Bearer ${token}` } }
+      const cashRes = await axios.get(`${baseURL}api/assigncab/cash/summary`, headers)
+      if (cashRes?.data) {
+        const { totalCashReceived = 0, cashWithDrivers = 0 } = cashRes.data
+        const safeTotal = Math.max(0, Number(totalCashReceived) || 0)
+        const safeWithDrivers = Math.max(0, Number(cashWithDrivers) || 0)
+        setCashSummary({ totalCashReceived: safeTotal, cashWithDrivers: safeWithDrivers, drivers: [] })
+      }
+    } catch {}
+  }
+
 //   // Updated navigation handlers for the new cards
 //   const handleFeatureClick = (featureName) => {
 //     setSelectedFeature(featureName)
@@ -641,7 +657,17 @@
 //                   </div>
 //                 )}
 
-//               {/* Stats Cards */}
+//               {/* Quick Actions Above Stats */}
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={refreshCashSummaryNow}
+                  className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Refresh Cash
+                </button>
+              </div>
+
+              {/* Stats Cards */}
 //               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
 //                 {[
 //                   {
@@ -968,7 +994,9 @@
 
 
 
-"use client"
+// moved "use client" to top of file
+
+
 
 import { useState, useEffect } from "react"
 import axios from "axios"
@@ -1215,6 +1243,7 @@ const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, onMar
 }
 
 const AdminDashboard = () => {
+  const router = useRouter()
   const [stats, setStats] = useState({
     totalDrivers: 0,
     totalCabs: 0,
@@ -1235,11 +1264,11 @@ const AdminDashboard = () => {
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const router = useRouter()
-  const [isDriverModel, setIsDriverModel] = useState(false)
-  const [showAccessDenied, setShowAccessDenied] = useState(false)
-  const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false)
-  const [subAdminData, setSubAdminData] = useState(null)
+  const [cashSummary, setCashSummary] = useState({
+    totalCashReceived: 0,
+    cashWithDrivers: 0,
+    drivers: []
+  })
   const [trialTimeRemaining, setTrialTimeRemaining] = useState({
     days: 0,
     hours: 0,
@@ -1248,16 +1277,68 @@ const AdminDashboard = () => {
     totalMs: 0,
   })
   const [showTrialCountdown, setShowTrialCountdown] = useState(false)
-
-  // Coming Soon Modal State
+  const [subAdminData, setSubAdminData] = useState(null)
+  const [isDriverModel, setIsDriverModel] = useState(false)
+  const [showAccessDenied, setShowAccessDenied] = useState(false)
+  const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false)
   const [showComingSoonModal, setShowComingSoonModal] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState("")
-
-  // Notification states
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [notificationLoading, setNotificationLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fast-response: prime from localStorage cache for instant render
+  useEffect(() => {
+    try {
+      const dRaw = localStorage.getItem("cache:drivers")
+      const cRaw = localStorage.getItem("cache:cabDetails")
+      const aRaw = localStorage.getItem("cache:assigncab")
+      const eRaw = localStorage.getItem("cache:expenses")
+
+      const driversData = dRaw ? JSON.parse(dRaw) : []
+      const cabsData = cRaw ? JSON.parse(cRaw) : []
+      let assignedCabsData = []
+      if (aRaw) {
+        const parsed = JSON.parse(aRaw)
+        if (Array.isArray(parsed)) assignedCabsData = parsed
+        else if (Array.isArray(parsed?.assignments)) assignedCabsData = parsed.assignments
+        else if (Array.isArray(parsed?.data)) assignedCabsData = parsed.data
+      }
+      const expensesData = Array.isArray(eRaw ? JSON.parse(eRaw) : null) ? JSON.parse(eRaw) : []
+
+      if (driversData.length || cabsData.length || assignedCabsData.length || expensesData.length) {
+        const currentlyAssignedCabs = assignedCabsData.filter((cab) => {
+          const status = cab.status?.toLowerCase?.() || ""
+          return status === "assigned" || status === "active" || status === "in-use"
+        })
+        const totalExpenses = expensesData.reduce((acc, curr) => acc + (curr.totalExpense || 0), 0)
+
+        // Basic stats
+        setStats((prev) => ({
+          ...prev,
+          totalDrivers: Array.isArray(driversData) ? driversData.length : 0,
+          totalCabs: Array.isArray(cabsData) ? cabsData.length : 0,
+          assignedCabs: currentlyAssignedCabs.length || 0,
+          totalExpenses: totalExpenses || 0,
+          // Keep other derived stats from server fetch later
+        }))
+
+        // Initialize cash summary with defaults
+        setCashSummary({ totalCashReceived: 0, cashWithDrivers: 0, drivers: [] })
+
+        // Expense chart data (simple per-cab total)
+        const monthlyExpenseData = expensesData.map((exp, index) => ({
+          month: exp.cabNumber || `Cab ${index + 1}`,
+          expense: exp.totalExpense || 0,
+        }))
+        setExpenseData(monthlyExpenseData)
+
+        // Set loading false to allow UI render while background fetch runs
+        setLoading(false)
+      }
+    } catch {}
+  }, [])
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -1472,7 +1553,6 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      setLoading(true)
       setError(null)
 
       try {
@@ -1625,6 +1705,21 @@ const AdminDashboard = () => {
         setDocumentExpiryData(mockDocumentExpiry)
         setRecentEChallans(mockRecentEChallans)
         setRecentFastTagPayments(mockFastTagPayments)
+
+        // Fetch cash summary for cards
+        try {
+          const cashRes = await axios.get(`${baseURL}api/assigncab/cash/summary`, headers)
+          if (cashRes?.data) {
+            const { totalCashReceived = 0, cashWithDrivers = 0 } = cashRes.data
+            const safeTotal = Math.max(0, Number(totalCashReceived) || 0)
+            const safeWithDrivers = Math.max(0, Number(cashWithDrivers) || 0)
+            setCashSummary({ totalCashReceived: safeTotal, cashWithDrivers: safeWithDrivers, drivers: [] })
+          }
+        } catch (e) {
+          console.warn("Cash summary fetch failed", e)
+          // Set default values if API fails
+          setCashSummary({ totalCashReceived: 0, cashWithDrivers: 0, drivers: [] })
+        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
         setError("Failed to fetch dashboard data. Please try again later.")
@@ -1634,6 +1729,43 @@ const AdminDashboard = () => {
     }
 
     fetchDashboardData()
+  }, [])
+
+  // Periodically refresh cash summary and on tab focus
+  useEffect(() => {
+    const fetchCashSummary = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
+        const headers = { headers: { Authorization: `Bearer ${token}` } }
+        const cashRes = await axios.get(`${baseURL}api/assigncab/cash/summary`, headers)
+        if (cashRes?.data) {
+          const { totalCashReceived = 0, cashWithDrivers = 0 } = cashRes.data
+          const safeTotal = Math.max(0, Number(totalCashReceived) || 0)
+          const safeWithDrivers = Math.max(0, Number(cashWithDrivers) || 0)
+          setCashSummary({ totalCashReceived: safeTotal, cashWithDrivers: safeWithDrivers, drivers: [] })
+        }
+      } catch (e) {
+        // do not surface error to UI; keep last known values
+      }
+    }
+
+    // refresh every 10s
+    const interval = setInterval(fetchCashSummary, 10000)
+
+    // refresh when page becomes visible again
+    const onVisibility = () => {
+      if (!document.hidden) fetchCashSummary()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+
+    // initial quick refresh after mount
+    fetchCashSummary()
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [])
 
   // Updated navigation handlers for the new cards
@@ -1867,6 +1999,21 @@ const AdminDashboard = () => {
                     label: "Total Expenses",
                     value: stats.totalExpenses,
                     icon: <MdOutlineAccountBalanceWallet size={20} className="text-gray-600" />,
+                    prefix: "₹",
+                    bgColor: "bg-white",
+                  },
+                  // New cash summary cards
+                  {
+                    label: "Total Cash Received",
+                    value: Math.max(0, Number(cashSummary?.totalCashReceived) || 0),
+                    icon: <MdOutlineAccountBalanceWallet size={20} className="text-green-600" />,
+                    prefix: "₹",
+                    bgColor: "bg-white",
+                  },
+                  {
+                    label: "Cash With Drivers",
+                    value: Math.max(0, Number(cashSummary?.cashWithDrivers) || 0),
+                    icon: <MdOutlineAccountBalanceWallet size={20} className="text-yellow-600" />,
                     prefix: "₹",
                     bgColor: "bg-white",
                   },

@@ -477,15 +477,11 @@
 //     </div>
 //   )
 // }
-
-
-
-
 "use client"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Sidebar from "../slidebar/page"
 import axios from "axios"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import baseURL from "@/utils/api"
 import { useRouter } from "next/navigation"
 
@@ -510,15 +506,40 @@ const AccessDeniedModal = () => {
 export default function CabService() {
   const router = useRouter()
   const [showAccessDenied, setShowAccessDenied] = useState(false)
-  const [drivers, setDrivers] = useState([])
-  const [assignments, setAssignments] = useState([])
-  const [services, setServices] = useState([])
+  // Prime from cache for instant render
+  const [drivers, setDrivers] = useState(() => {
+    try {
+      const d = localStorage.getItem("cache:drivers")
+      return d ? JSON.parse(d) : []
+    } catch { return [] }
+  })
+  const [assignments, setAssignments] = useState(() => {
+    try {
+      const a = localStorage.getItem("cache:assigncab")
+      const parsed = a ? JSON.parse(a) : null
+      if (Array.isArray(parsed?.assignments)) return parsed.assignments
+      if (Array.isArray(parsed)) return parsed
+      return []
+    } catch { return [] }
+  })
+  const [services, setServices] = useState(() => {
+    try {
+      const s = localStorage.getItem("cache:servicing")
+      const parsed = s ? JSON.parse(s) : null
+      if (Array.isArray(parsed?.services)) return parsed.services
+      if (Array.isArray(parsed)) return parsed
+      return []
+    } catch { return [] }
+  })
+  const [loading, setLoading] = useState(() => {
+    try { return !localStorage.getItem("cache:servicing") } catch { return true }
+  })
+
   const [selectedDriver, setSelectedDriver] = useState("")
   const [selectedCab, setSelectedCab] = useState("")
   const [receiptImage, setReceiptImage] = useState("")
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
   const assignedBy = typeof window !== "undefined" ? localStorage.getItem("id") : null
@@ -575,8 +596,14 @@ export default function CabService() {
       ])
 
       setDrivers(driversRes.data)
-      setAssignments(assignmentsRes.data.assignments || assignmentsRes.data || [])
-      setServices(servicesRes.data.services || servicesRes.data || [])
+      const a = assignmentsRes.data?.assignments || assignmentsRes.data || []
+      const s = servicesRes.data?.services || servicesRes.data || []
+      setAssignments(a)
+      setServices(s)
+      // recache for next instant load
+      try { localStorage.setItem("cache:drivers", JSON.stringify(driversRes.data)) } catch {}
+      try { localStorage.setItem("cache:assigncab", JSON.stringify(assignmentsRes.data)) } catch {}
+      try { localStorage.setItem("cache:servicing", JSON.stringify(servicesRes.data)) } catch {}
     } catch (error) {
       console.error("Error fetching:", error)
     } finally {
@@ -588,39 +615,39 @@ export default function CabService() {
     fetchInitialData()
   }, [fetchInitialData])
 
-const getAvailableCabs = useCallback(() => {
-  const cabMap = new Map();
-  assignments.forEach((assignment) => {
-    const cabDetail = assignment.CabsDetail || {};
-    if (cabDetail && cabDetail.id) {
-      const cabId = cabDetail.id;
+  const getAvailableCabs = useCallback(() => {
+    const cabMap = new Map();
+    assignments.forEach((assignment) => {
+      const cabDetail = assignment.CabsDetail || {};
+      if (cabDetail && cabDetail.id) {
+        const cabId = cabDetail.id;
 
-      // Use either servicingKmTravelled from assignment OR calculate from servicingMeter
-      let kmForServiceCheck = assignment.servicingKmTravelled || 0;
-      
-      // If kmTravelled not set, calculate from meter readings
-      if (!kmForServiceCheck && Array.isArray(assignment.servicingMeter) && assignment.servicingMeter.length > 1) {
-        const sortedMeters = [...assignment.servicingMeter].sort((a, b) => a - b);
-        kmForServiceCheck = sortedMeters[sortedMeters.length - 1] - sortedMeters[0];
-      }
+        // Use either servicingKmTravelled from assignment OR calculate from servicingMeter
+        let kmForServiceCheck = assignment.servicingKmTravelled || 0;
 
-      // Check if cab is eligible for servicing
-      if (
-        (assignment.servicingRequired || kmForServiceCheck > 10000) && // Either flagged or >10k km
-        !services.some((s) => s.cabId === cabId && s.status !== "completed") // Not already in service
-      ) {
-        cabMap.set(cabId, {
-          ...cabDetail,
-          id: cabId,
-          cabNumber: cabDetail.cabNumber,
-          kmTravelled: kmForServiceCheck,
-          servicingRequired: assignment.servicingRequired
-        });
+        // If kmTravelled not set, calculate from meter readings
+        if (!kmForServiceCheck && Array.isArray(assignment.servicingMeter) && assignment.servicingMeter.length > 1) {
+          const sortedMeters = [...assignment.servicingMeter].sort((a, b) => a - b);
+          kmForServiceCheck = sortedMeters[sortedMeters.length - 1] - sortedMeters[0];
+        }
+
+        // Check if cab is eligible for servicing
+        if (
+          (assignment.servicingRequired || kmForServiceCheck > 10000) &&
+          !services.some((s) => s.cabId === cabId && s.status !== "completed")
+        ) {
+          cabMap.set(cabId, {
+            ...cabDetail,
+            id: cabId,
+            cabNumber: cabDetail.cabNumber,
+            kmTravelled: kmForServiceCheck,
+            servicingRequired: assignment.servicingRequired,
+          });
+        }
       }
-    }
-  });
-  return Array.from(cabMap.values());
-}, [assignments, services]);
+    });
+    return Array.from(cabMap.values());
+  }, [assignments, services]);
   const getAvailableDrivers = useCallback(() => {
     const usedDriverIds = new Set(
       services

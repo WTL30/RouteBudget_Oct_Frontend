@@ -1,365 +1,3 @@
-// "use client"
-
-// import { useState, useEffect } from "react"
-// import Sidebar from "../slidebar/page"
-// import * as XLSX from "xlsx"
-// import { saveAs } from "file-saver"
-// import baseURL from "@/utils/api"
-// import { useRouter } from "next/navigation"
-// import axios from "axios"
-
-// const AccessDeniedModal = () => {
-//   const router = useRouter()
-
-//   const handleClose = () => {
-//     router.push("/")
-//   }
-
-//   return (
-//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-//       <div className="bg-white text-black p-8 rounded-lg shadow-lg max-w-sm w-full">
-//         <h2 className="text-xl font-semibold mb-4">Access Denied</h2>
-//         <p className="mb-6">Your access has been restricted. Please contact the administrator.</p>
-//         <button onClick={handleClose} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">
-//           Close
-//         </button>
-//       </div>
-//     </div>
-//   )
-// }
-
-// const CabExpenses = () => {
-//   const router = useRouter()
-//   const [showAccessDenied, setShowAccessDenied] = useState(false)
-//   const [allExpenses, setAllExpenses] = useState([])
-//   const [filteredExpenses, setFilteredExpenses] = useState([])
-//   const [searchQuery, setSearchQuery] = useState("")
-//   const [fromDate, setFromDate] = useState("")
-//   const [toDate, setToDate] = useState("")
-//   const [loading, setLoading] = useState(false)
-//   const [isInitialLoad, setIsInitialLoad] = useState(true)
-
-//   useEffect(() => {
-//     const checkUserStatus = async () => {
-//       try {
-//         const id = localStorage.getItem("id")
-//         if (!id) {
-//           router.push("/")
-//           return
-//         }
-
-//         const subAdminsRes = await axios.get(`${baseURL}api/admin/getAllSubAdmins`)
-//         const loggedInUser = subAdminsRes.data.subAdmins.find((e) => e._id === id)
-
-//         if (loggedInUser?.status === "Inactive") {
-//           localStorage.clear()
-//           setShowAccessDenied(true)
-//           return
-//         }
-//       } catch (err) {
-//         console.error("Error checking user status:", err)
-//       }
-//     }
-
-//     checkUserStatus()
-//   }, [router])
-
-//   const exportToExcel = () => {
-//     if (filteredExpenses.length === 0) {
-//       alert("No data to export!")
-//       return
-//     }
-
-//     setLoading(true)
-//     setTimeout(() => {
-//       try {
-//         const formattedData = filteredExpenses.map((cab, index) => ({
-//           ID: index + 1,
-//           "Cab Number": cab.cabNumber || "N/A",
-//           Date: cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A",
-//           "Fuel (₹)": cab.breakdown.fuel || 0,
-//           "FastTag (₹)": cab.breakdown.fastTag || 0,
-//           "Tyre Repair (₹)": cab.breakdown.tyrePuncture || 0,
-//           "Other Expenses (₹)": cab.breakdown.otherProblems || 0,
-//           "Total Expense (₹)": cab.totalExpense,
-//         }))
-
-//         const worksheet = XLSX.utils.json_to_sheet(formattedData)
-//         const workbook = XLSX.utils.book_new()
-//         XLSX.utils.book_append_sheet(workbook, worksheet, "Cab Expenses")
-//         const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-//         const data = new Blob([excelBuffer], {
-//           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-//         })
-
-//         saveAs(data, "CabExpenses.xlsx")
-//         alert("Export successful!")
-//       } catch (error) {
-//         console.error("Error exporting data:", error)
-//         alert("Failed to export data")
-//       } finally {
-//         setLoading(false)
-//       }
-//     }, 500)
-//   }
-
-//   useEffect(() => {
-//     const fetchAllExpenses = async () => {
-//       setLoading(true)
-//       try {
-//         const response = await fetch(`${baseURL}api/cabs/cabExpensive`, {
-//           method: "GET",
-//           headers: {
-//             "Content-Type": "application/json",
-//             Authorization: `Bearer ${localStorage.getItem("token")}`,
-//           },
-//         })
-
-//         const data = await response.json()
-//         if (response.ok) {
-//           setAllExpenses(data.data || [])
-//           setFilteredExpenses(data.data || [])
-//         } else {
-//           setAllExpenses([])
-//           setFilteredExpenses([])
-//         }
-//       } catch (error) {
-//         console.error("Error fetching expenses:", error)
-//       } finally {
-//         setTimeout(() => {
-//           setLoading(false)
-//           setIsInitialLoad(false)
-//         }, 500)
-//       }
-//     }
-
-//     fetchAllExpenses()
-//   }, [])
-
-//   const applyFilters = () => {
-//     setLoading(true)
-//     setTimeout(() => {
-//       let results = [...allExpenses]
-
-//       if (searchQuery.trim()) {
-//         results = results.filter((expense) => expense.cabNumber.toLowerCase().includes(searchQuery.toLowerCase()))
-//       }
-
-//       if (fromDate && toDate) {
-//         const fromDateObj = new Date(fromDate)
-//         const toDateObj = new Date(toDate)
-//         toDateObj.setHours(23, 59, 59, 999)
-
-//         results = results.filter((expense) => {
-//           const expenseDate = new Date(expense.cabDate)
-//           return expenseDate >= fromDateObj && expenseDate <= toDateObj
-//         })
-//       }
-
-//       setFilteredExpenses(results)
-//       setLoading(false)
-//     }, 500)
-//   }
-
-//   const handleSearch = (e) => {
-//     e.preventDefault()
-//     applyFilters()
-//   }
-
-//   const handleDateFilter = () => {
-//     if (!fromDate || !toDate) {
-//       alert("Please select both start and end dates")
-//       return
-//     }
-//     applyFilters()
-//   }
-
-//   const resetFilters = () => {
-//     setLoading(true)
-//     setTimeout(() => {
-//       setSearchQuery("")
-//       setFromDate("")
-//       setToDate("")
-//       setFilteredExpenses(allExpenses)
-//       setLoading(false)
-//     }, 500)
-//   }
-
-//   if (loading && isInitialLoad) {
-//     return (
-//       <div className="flex bg-gray-900 min-h-screen text-white">
-//         <Sidebar />
-//         <div className="flex-1 p-6 mt-20 sm:mt-0 md:ml-60 flex items-center justify-center">
-//           <div className="text-center">
-//             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-//             <p>Loading...</p>
-//           </div>
-//         </div>
-//       </div>
-//     )
-//   }
-//   return (
-//     <div className="flex min-h-screen bg-gray-800">
-//       <Sidebar />
-
-//       <div className="flex-1 md:ml-60 p-4 md:p-6 text-white mt-20 sm:mt-0 transition-all duration-300">
-//         {showAccessDenied && <AccessDeniedModal />}
-
-//         <h1 className="text-xl md:text-2xl font-bold mb-4">Expenses</h1>
-
-//         <div className="space-y-4 mb-6">
-//           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
-//             <input
-//               type="text"
-//               placeholder="Search by Cab Number"
-//               value={searchQuery}
-//               onChange={(e) => setSearchQuery(e.target.value)}
-//               className="border p-2 rounded w-full sm:w-64 text-white bg-gray-700"
-//             />
-//             <button
-//               type="submit"
-//               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition"
-//               disabled={loading || isInitialLoad}
-//             >
-//               {loading ? "Searching..." : "Search"}
-//             </button>
-//           </form>
-
-//           <div className="flex flex-col sm:flex-row gap-2">
-//             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-white">
-//               <span>From:</span>
-//               <input
-//                 type="date"
-//                 value={fromDate}
-//                 onChange={(e) => setFromDate(e.target.value)}
-//                 className="border p-2 rounded text-white bg-gray-700"
-//               />
-//             </div>
-//             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-white">
-//               <span>To:</span>
-//               <input
-//                 type="date"
-//                 value={toDate}
-//                 onChange={(e) => setToDate(e.target.value)}
-//                 className="border p-2 rounded text-white bg-gray-700"
-//               />
-//             </div>
-//             <div className="flex flex-col sm:flex-row gap-2">
-//               <button
-//                 onClick={handleDateFilter}
-//                 className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
-//                 disabled={loading || isInitialLoad}
-//               >
-//                 Filter by Date
-//               </button>
-//               <button
-//                 onClick={resetFilters}
-//                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-//                 disabled={loading || isInitialLoad}
-//               >
-//                 Reset Filters
-//               </button>
-//               <button
-//                 onClick={exportToExcel}
-//                 disabled={loading || filteredExpenses.length === 0}
-//                 className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
-//               >
-//                 {loading ? "Exporting..." : "Export to Excel"}
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-
-//         {loading || isInitialLoad ? (
-//           <div className="animate-pulse space-y-4">
-//             {[...Array(5)].map((_, i) => (
-//               <div key={i} className="bg-gray-700 h-16 rounded-md"></div>
-//             ))}
-//           </div>
-//         ) : (
-//           <>
-//             <div className="hidden md:block bg-gray-700 shadow-lg rounded-lg overflow-x-auto">
-//               <table className="w-full border-collapse">
-//                 <thead>
-//                   <tr className="bg-gray-800 text-white">
-//                     <th className="p-3 text-left">Cab Number</th>
-//                     <th className="p-3 text-left">Date</th>
-//                     <th className="p-3 text-left">Breakdown</th>
-//                     <th className="p-3 text-left">Total (₹)</th>
-//                   </tr>
-//                 </thead>
-//                 <tbody>
-//                   {filteredExpenses.length > 0 ? (
-//                     filteredExpenses.map((cab, index) => (
-//                       <tr key={`${cab.cabNumber}-${index}`} className="border-b border-gray-600 hover:bg-gray-600">
-//                         <td className="p-3 font-medium">{cab.cabNumber}</td>
-//                         <td className="p-3">{cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A"}</td>
-//                         <td className="p-3 text-sm">
-//                           <ul className="space-y-1">
-//                             <li>Fuel: ₹{cab.breakdown.fuel}</li>
-//                             <li>FastTag: ₹{cab.breakdown.fastTag}</li>
-//                             <li>Tyre: ₹{cab.breakdown.tyrePuncture}</li>
-//                             <li>Other: ₹{cab.breakdown.otherProblems}</li>
-//                           </ul>
-//                         </td>
-//                         <td className="p-3 font-medium">₹{cab.totalExpense}</td>
-//                       </tr>
-//                     ))
-//                   ) : (
-//                     <tr>
-//                       <td colSpan="4" className="p-4 text-center">
-//                         No expenses found
-//                       </td>
-//                     </tr>
-//                   )}
-//                 </tbody>
-//               </table>
-//             </div>
-
-//             <div className="md:hidden space-y-3">
-//               {filteredExpenses.length > 0 ? (
-//                 filteredExpenses.map((cab, index) => (
-//                   <div key={`${cab.cabNumber}-${index}`} className="bg-gray-700 p-4 rounded-lg shadow">
-//                     <div className="grid grid-cols-2 gap-4 mb-3">
-//                       <div>
-//                         <p className="text-gray-400 text-sm">Cab Number</p>
-//                         <p className="font-medium">{cab.cabNumber}</p>
-//                       </div>
-//                       <div>
-//                         <p className="text-gray-400 text-sm">Date</p>
-//                         <p>{cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A"}</p>
-//                       </div>
-//                       <div>
-//                         <p className="text-gray-400 text-sm">Total</p>
-//                         <p className="font-medium">₹{cab.totalExpense}</p>
-//                       </div>
-//                     </div>
-//                     <div>
-//                       <p className="text-gray-400 text-sm mb-1">Breakdown</p>
-//                       <div className="bg-gray-800 p-3 rounded">
-//                         <p>Fuel: ₹{cab.breakdown.fuel}</p>
-//                         <p>FastTag: ₹{cab.breakdown.fastTag}</p>
-//                         <p>Tyre: ₹{cab.breakdown.tyrePuncture}</p>
-//                         <p>Other: ₹{cab.breakdown.otherProblems}</p>
-//                       </div>
-//                     </div>
-//                   </div>
-//                 ))
-//               ) : (
-//                 <div className="p-4 text-center text-white bg-gray-700 rounded-lg">No expenses found</div>
-//               )}
-//             </div>
-//           </>
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
-
-// export default CabExpenses
-
-
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -392,15 +30,58 @@ const AccessDeniedModal = () => {
 
 const CabExpenses = () => {
   const router = useRouter()
+
+  const normalizeLocation = (value) => {
+    if (typeof value !== "string") {
+      return value ?? null
+    }
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  }
+
+  const mapExpenses = (items = []) =>
+    items.map((item) => ({
+      ...item,
+      pickupLocation: normalizeLocation(
+        item.pickupLocation ?? item.locationFrom ?? item.pickupHistory ?? null
+      ),
+      dropLocation: normalizeLocation(
+        item.dropLocation ?? item.locationTo ?? item.dropHistory ?? null
+      ),
+    }))
+
   const [showAccessDenied, setShowAccessDenied] = useState(false)
-  const [allExpenses, setAllExpenses] = useState([])
-  const [filteredExpenses, setFilteredExpenses] = useState([])
+  const [allExpenses, setAllExpenses] = useState(() => {
+    // Prime from local cache for instant render
+    try {
+      const cached = localStorage.getItem("cache:expenses")
+      return cached ? mapExpenses(JSON.parse(cached)) : []
+    } catch {
+      return []
+    }
+  })
+  const [filteredExpenses, setFilteredExpenses] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cache:expenses")
+      return cached ? mapExpenses(JSON.parse(cached)) : []
+    } catch {
+      return []
+    }
+  })
   const [searchQuery, setSearchQuery] = useState("")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
   const [loading, setLoading] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [isInitialLoad, setIsInitialLoad] = useState(() => {
+    try { return !localStorage.getItem("cache:expenses") } catch { return true }
+  })
   const [cabNumbers, setCabNumbers] = useState({}) // To store cabId to cabNumber mapping
+  // Admin-only export controls
+  const [adminCabs, setAdminCabs] = useState([])
+  const [exportCabId, setExportCabId] = useState("")
+  const [exportFrom, setExportFrom] = useState("")
+  const [exportTo, setExportTo] = useState("")
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -448,9 +129,33 @@ const CabExpenses = () => {
     fetchCabNumbers()
   }, [])
 
+  // Fetch only this admin's cabs for header export control
+  useEffect(() => {
+    const fetchAdminCabs = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
+        const res = await axios.get(`${baseURL}api/assigncab/admin-cabs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setAdminCabs(Array.isArray(res.data?.cabs) ? res.data.cabs : [])
+      } catch (e) {
+        console.warn("Failed to fetch admin cabs", e)
+        setAdminCabs([])
+      }
+    }
+    fetchAdminCabs()
+  }, [])
+
   const getCabNumber = (cabId) => {
     return cabNumbers[cabId] || `Cab ${cabId}`
   }
+
+  const getPickupLocation = (cab) =>
+    cab.pickupLocation || cab.locationFrom || cab.pickupHistory || null
+
+  const getDropLocation = (cab) =>
+    cab.dropLocation || cab.locationTo || cab.dropHistory || null
 
   const exportToExcel = () => {
     if (filteredExpenses.length === 0) {
@@ -464,12 +169,16 @@ const CabExpenses = () => {
         const formattedData = filteredExpenses.map((cab, index) => ({
           ID: index + 1,
           "Cab Number": getCabNumber(cab.cabId),
+          "Pickup Location": getPickupLocation(cab) || "-",
+          "Drop Location": getDropLocation(cab) || "-",
           Date: cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A",
+          "Cash Collected (₹)": cab.cashCollected || 0,
           "Fuel (₹)": cab.breakdown.fuel || 0,
           "FastTag (₹)": cab.breakdown.fastTag || 0,
           "Tyre Repair (₹)": cab.breakdown.tyrePuncture || 0,
           "Other Expenses (₹)": cab.breakdown.otherProblems || 0,
           "Total Expense (₹)": cab.totalExpense,
+          "Net Cash (₹)": (cab.cashCollected || 0) - (cab.totalExpense || 0),
         }))
 
         const worksheet = XLSX.utils.json_to_sheet(formattedData)
@@ -502,8 +211,14 @@ const CabExpenses = () => {
         })
 
         if (response.data.success) {
-          setAllExpenses(response.data.data || [])
-          setFilteredExpenses(response.data.data || [])
+          const data = response.data.data || []
+          const normalized = mapExpenses(data)
+          setAllExpenses(normalized)
+          setFilteredExpenses(normalized)
+          // recache for next instant render
+          try {
+            localStorage.setItem("cache:expenses", JSON.stringify(normalized))
+          } catch {}
         } else {
           setAllExpenses([])
           setFilteredExpenses([])
@@ -705,10 +420,10 @@ const CabExpenses = () => {
                         Date
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Breakdown
+                        Cash & Expenses
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Amount
+                        Total Expense
                       </th>
                     </tr>
                   </thead>
@@ -718,6 +433,12 @@ const CabExpenses = () => {
                         <tr key={`${cab.cabId}-${index}`} className="hover:bg-gray-50 transition-colors duration-150">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{getCabNumber(cab.cabId)}</div>
+                            {(getPickupLocation(cab) || getDropLocation(cab)) && (
+                              <div className="mt-1 text-xs text-gray-500 space-y-0.5">
+                                {getPickupLocation(cab) && <div>Pickup: {getPickupLocation(cab)}</div>}
+                                {getDropLocation(cab) && <div>Drop: {getDropLocation(cab)}</div>}
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
@@ -726,26 +447,36 @@ const CabExpenses = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-gray-900 space-y-1">
+                              {/* <div className="flex justify-between">
+                                <span className="font-medium">Cash Collected:</span>
+                                <span className="font-semibold text-green-600">₹{cab.cashCollected?.toLocaleString() || 0}</span>
+                              </div> */}
                               <div className="flex">
                                 <span className="w-20">Fuel:</span>
-                                <span className="font-medium">₹{cab.breakdown.fuel || 0}</span>
+                                <span className="font-medium">₹{cab.breakdown.fuel?.toLocaleString() || 0}</span>
                               </div>
                               <div className="flex">
                                 <span className="w-20">FastTag:</span>
-                                <span className="font-medium">₹{cab.breakdown.fastTag || 0}</span>
+                                <span className="font-medium">₹{cab.breakdown.fastTag?.toLocaleString() || 0}</span>
                               </div>
                               <div className="flex">
                                 <span className="w-20">Tyre:</span>
-                                <span className="font-medium">₹{cab.breakdown.tyrePuncture || 0}</span>
+                                <span className="font-medium">₹{cab.breakdown.tyrePuncture?.toLocaleString() || 0}</span>
                               </div>
                               <div className="flex">
                                 <span className="w-20">Other:</span>
-                                <span className="font-medium">₹{cab.breakdown.otherProblems || 0}</span>
+                                <span className="font-medium">₹{cab.breakdown.otherProblems?.toLocaleString() || 0}</span>
                               </div>
+                              {/* <div className="flex justify-between border-t border-gray-300 pt-1 mt-1">
+                                <span className="font-medium">Net cash:</span>
+                                <span className={`font-semibold ${(cab.cashCollected || 0) - (cab.totalExpense || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  ₹{((cab.cashCollected || 0) - (cab.totalExpense || 0)).toLocaleString()}
+                                </span>
+                              </div> */}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-bold text-gray-900">₹{cab.totalExpense}</div>
+                            <div className="text-sm font-bold text-gray-900">₹{cab.totalExpense?.toLocaleString() || 0}</div>
                           </td>
                         </tr>
                       ))
@@ -767,43 +498,61 @@ const CabExpenses = () => {
                   </tbody>
                 </table>
               </div>
-
               {/* Mobile Cards */}
               <div className="md:hidden p-4 space-y-4">
                 {filteredExpenses.length > 0 ? (
                   filteredExpenses.map((cab, index) => (
-                    <div key={`${cab.cabId}-${index}`} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div key={`${cab.cabId}-${index}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-gray-900">{getCabNumber(cab.cabId)}</h3>
-                          <p className="text-sm text-gray-600">
-                            {cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A"}
-                          </p>
+                          <p className="text-gray-600 text-xs uppercase tracking-wide">Cab Number</p>
+                          <p className="text-lg font-semibold text-gray-900">{getCabNumber(cab.cabId)}</p>
+                          {(cab.pickupLocation || cab.dropLocation) && (
+                            <div className="mt-1 text-xs text-gray-500 space-y-0.5">
+                              {cab.pickupLocation && <div>Pickup: {cab.pickupLocation}</div>}
+                              {cab.dropLocation && <div>Drop: {cab.dropLocation}</div>}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-gray-900">₹{cab.totalExpense}</p>
+                          <p className="text-gray-600 text-xs uppercase tracking-wide">Date</p>
+                          <p className="text-lg font-bold text-gray-900">{cab.cabDate ? new Date(cab.cabDate).toLocaleDateString() : "N/A"}</p>
+                          <p className="text-sm font-medium text-gray-700 mt-1">₹{cab.totalExpense?.toLocaleString() || 0}</p>
                         </div>
                       </div>
-                      
-                      <div className="border-t border-gray-200 pt-3">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Expense Breakdown</h4>
+
+                      <div className="border-t border-gray-200 pt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Fuel:</span>
-                            <span className="font-medium text-gray-900">₹{cab.breakdown.fuel || 0}</span>
+                            <span className="font-medium text-gray-900">₹{cab.breakdown.fuel?.toLocaleString() || 0}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">FastTag:</span>
-                            <span className="font-medium text-gray-900">₹{cab.breakdown.fastTag || 0}</span>
+                            <span className="font-medium text-gray-900">₹{cab.breakdown.fastTag?.toLocaleString() || 0}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Tyre:</span>
-                            <span className="font-medium text-gray-900">₹{cab.breakdown.tyrePuncture || 0}</span>
+                            <span className="font-medium text-gray-900">₹{cab.breakdown.tyrePuncture?.toLocaleString() || 0}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Other:</span>
-                            <span className="font-medium text-gray-900">₹{cab.breakdown.otherProblems || 0}</span>
+                            <span className="font-medium text-gray-900">₹{cab.breakdown.otherProblems?.toLocaleString() || 0}</span>
                           </div>
+                        </div>
+
+                        {(getPickupLocation(cab) || getDropLocation(cab)) && (
+                          <div className="text-xs text-gray-500 space-y-1">
+                            {getPickupLocation(cab) && <div>Pickup: {getPickupLocation(cab)}</div>}
+                            {getDropLocation(cab) && <div>Drop: {getDropLocation(cab)}</div>}
+                          </div>
+                        )}
+
+                        <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                          <span className="font-medium text-gray-700">Net Cash:</span>
+                          <span className={`font-semibold ${(cab.cashCollected || 0) - (cab.totalExpense || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            ₹{((cab.cashCollected || 0) - (cab.totalExpense || 0)).toLocaleString()}
+                          </span>
                         </div>
                       </div>
                     </div>

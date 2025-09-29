@@ -10,8 +10,22 @@ import { FiEdit, FiTrash2, FiMapPin } from 'react-icons/fi'
 import Image from 'next/image'
 
 const CabDetails = () => {
-  const [cabs, setCabs] = useState([])
-  const [loading, setLoading] = useState(true)
+  // Prime from local cache for instant render
+  const [cabs, setCabs] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cache:cabDetails')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !localStorage.getItem('cache:cabDetails')
+    } catch {
+      return true
+    }
+  })
   const [selectedCab, setSelectedCab] = useState(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editFormData, setEditFormData] = useState({
@@ -19,7 +33,7 @@ const CabDetails = () => {
     cabImage: '',
     insuranceNumber: '',
     registrationNumber: '',
-    imei: '', // 🆕 Added IMEI field
+    imei: '', // Added IMEI field
   })
 
   // Fetch cab list
@@ -30,8 +44,9 @@ const CabDetails = () => {
         const res = await axios.get(`${baseURL}api/cabDetails`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-         console.log('API response:', res.data) // Add this line
+        // Update state and cache for next instant load
         setCabs(res.data)
+        try { localStorage.setItem('cache:cabDetails', JSON.stringify(res.data)) } catch {}
       } catch (error) {
         console.error('Error fetching cabs:', error)
         toast.error('Error loading cabs')
@@ -40,6 +55,7 @@ const CabDetails = () => {
       }
     }
 
+    // Kick background revalidation regardless of having cache
     fetchCabs()
   }, [])
 
