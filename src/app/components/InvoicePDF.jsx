@@ -477,7 +477,7 @@
 
 // //         <View style={styles.infoBlock}>
 // //           <View style={styles.leftInfo}>
-// //             <Text style={{ fontWeight: "bold", color: "#007BFF" }}>WTL TOURISM PRIVATE LIMITED</Text>
+// //             <Text style={{ fontWeight: "bold", color: "#007BFF" }}>Route BudgetPRIVATE LIMITED</Text>
 // //             <Text>Floor No.: First Floor</Text>
 // //             <Text>Office No. 016, A-Building, S No.53/2A/1, City Vista, Fountain Road, Pune</Text>
 // //             <Text>State: Maharashtra, Pincode-411014</Text>

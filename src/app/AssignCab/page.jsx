@@ -150,55 +150,63 @@ export default function AssignCab() {
   useEffect(() => {
     if (autocompleteLoaded && pickupInputRef.current && dropInputRef.current) {
       const pickupAutocomplete = new window.google.maps.places.Autocomplete(pickupInputRef.current, {
-        types: ["geocode"], // Changed to geocode for broader suggestions
+        types: ["geocode"],
         componentRestrictions: { country: "in" },
       })
       const dropAutocomplete = new window.google.maps.places.Autocomplete(dropInputRef.current, {
-        types: ["geocode"], // Changed to geocode for broader suggestions
+        types: ["geocode"],
         componentRestrictions: { country: "in" },
       })
 
       pickupAutocomplete.addListener("place_changed", () => {
         const place = pickupAutocomplete.getPlace()
         console.log("📍 Pickup Place Response:", place)
-        if (place.formatted_address) {
+        if (place.formatted_address && place.geometry) {
           const city = place.address_components?.find((comp) =>
             comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")
           )?.long_name || ""
           const state = place.address_components?.find((comp) =>
             comp.types.includes("administrative_area_level_1")
           )?.long_name || ""
+          const lat = place.geometry.location.lat()
+          const lng = place.geometry.location.lng()
           setTripData((prev) => ({
             ...prev,
             pickupLocation: place.formatted_address,
             pickupCity: city,
             pickupState: state,
+            pickupLatitude: lat,
+            pickupLongitude: lng,
           }))
-          console.log(`Pickup Location: ${place.formatted_address}, City: ${city}, State: ${state}`)
+          console.log(`✅ Pickup: ${place.formatted_address}, City: ${city}, State: ${state}, Coords: ${lat}, ${lng}`)
         } else {
-          console.log("⚠️ No formatted address found for pickup location")
+          console.log("⚠️ No formatted address or geometry found for pickup location")
         }
       })
 
       dropAutocomplete.addListener("place_changed", () => {
         const place = dropAutocomplete.getPlace()
         console.log("📍 Drop Place Response:", place)
-        if (place.formatted_address) {
+        if (place.formatted_address && place.geometry) {
           const city = place.address_components?.find((comp) =>
             comp.types.includes("locality") || comp.types.includes("administrative_area_level_2")
           )?.long_name || ""
           const state = place.address_components?.find((comp) =>
             comp.types.includes("administrative_area_level_1")
           )?.long_name || ""
+          const lat = place.geometry.location.lat()
+          const lng = place.geometry.location.lng()
           setTripData((prev) => ({
             ...prev,
             dropLocation: place.formatted_address,
             dropCity: city,
             dropState: state,
+            dropLatitude: lat,
+            dropLongitude: lng,
           }))
-          console.log(`Drop Location: ${place.formatted_address}, City: ${city}, State: ${state}`)
+          console.log(`✅ Drop: ${place.formatted_address}, City: ${city}, State: ${state}, Coords: ${lat}, ${lng}`)
         } else {
-          console.log("⚠️ No formatted address found for drop location")
+          console.log("⚠️ No formatted address or geometry found for drop location")
         }
       })
     }
@@ -384,7 +392,7 @@ export default function AssignCab() {
         return
       }
 
-      // Updated payload with city and state
+      // Updated payload with city, state, and coordinates
       const payload = {
         driverId: selectedDriverObj.id,
         cabNumber: selectedCabObj.cabNumber,
@@ -394,9 +402,13 @@ export default function AssignCab() {
         pickupLocation: tripData.pickupLocation.trim(),
         pickupCity: tripData.pickupCity.trim(),
         pickupState: tripData.pickupState.trim(),
+        pickupLatitude: tripData.pickupLatitude ? Number.parseFloat(tripData.pickupLatitude) : null,
+        pickupLongitude: tripData.pickupLongitude ? Number.parseFloat(tripData.pickupLongitude) : null,
         dropLocation: tripData.dropLocation.trim(),
         dropCity: tripData.dropCity.trim(),
         dropState: tripData.dropState.trim(),
+        dropLatitude: tripData.dropLatitude ? Number.parseFloat(tripData.dropLatitude) : null,
+        dropLongitude: tripData.dropLongitude ? Number.parseFloat(tripData.dropLongitude) : null,
         tripType: tripData.tripType,
         vehicleType: tripData.vehicleType,
         duration: tripData.duration ? Number.parseFloat(tripData.duration) : 0,
@@ -409,7 +421,7 @@ export default function AssignCab() {
         adminNotes: tripData.adminNotes.trim() || "",
       }
 
-      console.log("📤 FINAL Payload being sent:", payload)
+      console.log("📤FINAL Payload being sent:", payload)
 
       // Additional validation
       if (!payload.driverId) {
