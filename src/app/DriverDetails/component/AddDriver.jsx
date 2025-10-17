@@ -82,9 +82,9 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
     if (!addDriverFormData.licenseNo.trim()) newErrors.licenseNo = "License No is required";
     if (!addDriverFormData.adharNo.trim()) newErrors.adharNo = "Aadhar No is required"
     else if (!/^\d{12}$/.test(addDriverFormData.adharNo)) newErrors.adharNo = "Aadhar must be 12 digits"
-    if (!profileImage) newErrors.profileImage = "Profile image is required"
-    if (!licenseImage) newErrors.licenseImage = "License image is required"
-    if (!adharImage) newErrors.adharImage = "Aadhar image is required"
+    // if (!profileImage) newErrors.profileImage = "Profile image is required"
+    // if (!licenseImage) newErrors.licenseImage = "License image is required"
+    // if (!adharImage) newErrors.adharImage = "Aadhar image is required"
 
     setAddDriverErrors(newErrors)
     return Object.keys(newErrors).length === 0
