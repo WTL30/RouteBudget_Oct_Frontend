@@ -82,9 +82,9 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
     }
     if (!addDriverFormData.phone.trim()) newErrors.phone = "Phone is required"
     else if (!/^\d{10}$/.test(addDriverFormData.phone)) newErrors.phone = "Phone must be 10 digits"
-    if (!addDriverFormData.licenseNo.trim()) newErrors.licenseNo = "License No is required";
-    if (!addDriverFormData.adharNo.trim()) newErrors.adharNo = "Aadhar No is required"
-    else if (!/^\d{12}$/.test(addDriverFormData.adharNo)) newErrors.adharNo = "Aadhar must be 12 digits"
+    // License Number is optional
+    // Aadhaar Number is optional; validate only if provided
+    if (addDriverFormData.adharNo.trim() && !/^\d{12}$/.test(addDriverFormData.adharNo)) newErrors.adharNo = "Aadhar must be 12 digits"
     
     // Salary validation based on type
     if (salaryType === "fixed") {

@@ -40,10 +40,6 @@ const AddCab = () => {
     const validateForm = () => {
         let newErrors = {};
         if (!formData.cabNumber.trim()) newErrors.cabNumber = "Cab Number is required";
-        if (!formData.insuranceNumber.trim()) newErrors.insuranceNumber = "Insurance Number is required";
-        if (!formData.insuranceExpiry.trim()) newErrors.insuranceExpiry = "Insurance Expiry is required";
-        if (!formData.registrationNumber.trim()) newErrors.registrationNumber = "Registration Number is required";
-        if (!formData.cabImage) newErrors.cabImage = "Cab image is required";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;

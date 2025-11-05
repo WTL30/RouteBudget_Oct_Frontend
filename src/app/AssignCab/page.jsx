@@ -509,17 +509,9 @@ export default function AssignCab() {
     const cabNumberTrimmed = cabFormData.cabNumber.replace(/\s/g, "")
     if (!cabNumberTrimmed) errors.cabNumber = "Cab Number is required"
     else if (cabNumberTrimmed.length < 6 || cabNumberTrimmed.length > 12) errors.cabNumber = "Invalid Cab Number"
-    if (!cabFormData.insuranceNumber.trim()) errors.insuranceNumber = "Insurance Number is required"
-    if (!cabFormData.insuranceExpiry.trim()) errors.insuranceExpiry = "Insurance Expiry is required"
-    if (!cabFormData.registrationNumber.trim()) errors.registrationNumber = "Registration Number is required"
-    if (!cabFormData.cabImage) errors.cabImage = "Cab image is required"
     setCabFormErrors(errors)
     return Object.keys(errors).length === 0
   }
-
-  // const handleAddCabSubmit = async (e) => {
-  //   e.preventDefault()
-  //   if (!validateCabForm()) return
 
   //   setLoading(true)
   //   setCabFormSuccess("")
