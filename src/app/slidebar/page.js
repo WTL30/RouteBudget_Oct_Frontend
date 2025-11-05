@@ -11,7 +11,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, LogOut, Truck } from "lucide-react";
+import { Menu, X, LogOut, Truck, ChevronDown, ChevronUp } from "lucide-react";
 import { MdOutlineAssignmentTurnedIn, MdDashboard } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { FiUser, FiTruck, FiSettings, FiBookmark, FiCheckSquare , FiBriefcase} from "react-icons/fi";
@@ -29,6 +29,7 @@ const Sidebar = ({ subscription: propSubscription }) => {
   const [companyEmail, setCompanyEmail] = useState("");
   const [activeItem, setActiveItem] = useState("/AdminDashboard");
   const [subscription, setSubscription] = useState(propSubscription || null);
+  const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false);
   const router = useRouter();
 
   // Read localStorage subscription (fast) and then fetch server to ensure fresh
@@ -104,17 +105,24 @@ const Sidebar = ({ subscription: propSubscription }) => {
     () => [
       { icon: <MdDashboard size={20} />, label: "Dashboard", link: "/AdminDashboard" },
       { icon: <FiUser size={20} />, label: "Driver Details", link: "/DriverDetails" },
-      { icon: <BsFillTaxiFrontFill size={20} />, label: "Vehicle Details", link: "/CabDetails" },
-      { icon: <MdOutlineAssignmentTurnedIn size={20} />, label: "Assign Vehicle", link: "/AssignCab" },
-      { icon: <FiTruck size={20} />, label: "View Vehicle", link: "/CabInfo" },
-      { icon: <FiBookmark size={20} />, label: "Job Market", link: "/JobMarket" },
+      { 
+        icon: <BsFillTaxiFrontFill size={20} />, 
+        label: "Vehicle", 
+        isDropdown: true,
+        subItems: [
+          { icon: <BsFillTaxiFrontFill size={18} />, label: "Vehicle Details", link: "/CabDetails" },
+          { icon: <MdOutlineAssignmentTurnedIn size={18} />, label: "Assign Vehicle", link: "/AssignCab" },
+          { icon: <FiTruck size={18} />, label: "Trip Status", link: "/CabInfo" },
+        ]
+      },
+      { icon: <FiCheckSquare size={20} />, label: "Attendance", link: "/Attendance" },
+      { icon: <RiMoneyRupeeCircleLine size={20} />, label: "Advance Salary", link: "/AdvanceSalary" },
       { icon: <FiBriefcase size={20} />, label: "My Bookings", link: "/MyBookings" },
-      { icon: <FiCheckSquare size={20} />, label: "Trip Logs", link: "/TripLogs" },
+      { icon: <FiTruck size={20} />, label: "Tracking", link: "/GPSTracking" },
       { icon: <FiSettings size={20} />, label: "Servicing", link: "/Servicing" },
+      { icon: <RiMoneyRupeeCircleLine size={20} />, label: "FastTag Recharge", link: "/FastTagPayments" },
       { icon: <RiMoneyRupeeCircleLine size={20} />, label: "Expenses", link: "/Expensive" },
-      { icon: <FiTruck size={20} />, label: "FastTag Recharge", link: "/FastTagPayments" },
-      { icon: <FiTruck size={20} />, label: "Live Tracking", link: "/GPSTracking" },
-      { icon: <FiSettings size={20} />, label: "Predictive Maintenance", link: "/PredictiveMaintenance" },
+      { icon: <FiSettings size={20} />, label: "Maintenance", link: "/PredictiveMaintenance" },
       { icon: <FaFileInvoice size={20} />, label: "Invoice", link: "/InvoicePDF" },
     ],
     []
@@ -336,6 +344,60 @@ const Sidebar = ({ subscription: propSubscription }) => {
               </li>
 
               {menuItems.map((item, i) => {
+                if (item.isDropdown) {
+                  // Vehicle dropdown
+                  return (
+                    <li key={i}>
+                      <button
+                        disabled={!otherTabsEnabled}
+                        onClick={() => {
+                          if (!otherTabsEnabled) return;
+                          setVehicleDropdownOpen(!vehicleDropdownOpen);
+                        }}
+                        className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg transition-all duration-200 ${
+                          !otherTabsEnabled
+                            ? "text-gray-500 cursor-not-allowed opacity-50"
+                            : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400">{item.icon}</span>
+                          <span className="text-sm">{item.label}</span>
+                        </div>
+                        {vehicleDropdownOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                      {vehicleDropdownOpen && otherTabsEnabled && (
+                        <ul className="ml-6 mt-1 space-y-1">
+                          {item.subItems.map((subItem, j) => {
+                            const isActive = activeItem === subItem.link;
+                            return (
+                              <li key={j}>
+                                <button
+                                  onClick={() => {
+                                    setActiveItem(subItem.link);
+                                    router.push(subItem.link);
+                                    if (window.innerWidth < 1024) setIsOpen(false);
+                                  }}
+                                  onMouseEnter={() => window.__prewarm?.(subItem.link)}
+                                  className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 ${
+                                    isActive
+                                      ? "bg-yellow-400 text-gray-900 font-semibold"
+                                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                                  }`}
+                                >
+                                  <span className={`${isActive ? "text-gray-900" : "text-gray-400"}`}>{subItem.icon}</span>
+                                  <span className="text-sm">{subItem.label}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                }
+                
+                // Regular menu item
                 const isActive = activeItem === item.link;
                 return (
                   <li key={i}>

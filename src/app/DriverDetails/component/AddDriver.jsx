@@ -29,6 +29,9 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
     adharNo: "",
     addedBy: "",
   })
+  const [salary, setSalary] = useState("")
+  const [salaryType, setSalaryType] = useState("fixed")
+  const [perTripRate, setPerTripRate] = useState("")
   const [addDriverLoading, setAddDriverLoading] = useState(false)
   const [profileImageName, setProfileImageName] = useState('');
   const [profileImage, setProfileImage] = useState(null)
@@ -82,6 +85,18 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
     if (!addDriverFormData.licenseNo.trim()) newErrors.licenseNo = "License No is required";
     if (!addDriverFormData.adharNo.trim()) newErrors.adharNo = "Aadhar No is required"
     else if (!/^\d{12}$/.test(addDriverFormData.adharNo)) newErrors.adharNo = "Aadhar must be 12 digits"
+    
+    // Salary validation based on type
+    if (salaryType === "fixed") {
+      if (!salary || isNaN(Number(salary)) || Number(salary) <= 0) {
+        newErrors.salary = "Fixed Monthly Salary must be greater than 0"
+      }
+    } else {
+      // Per-trip type - only per trip rate is required
+      if (!perTripRate || isNaN(Number(perTripRate)) || Number(perTripRate) <= 0) {
+        newErrors.perTripRate = "Per Trip Rate must be greater than 0"
+      }
+    }
     // if (!profileImage) newErrors.profileImage = "Profile image is required"
     // if (!licenseImage) newErrors.licenseImage = "License image is required"
     // if (!adharImage) newErrors.adharImage = "Aadhar image is required"
@@ -99,6 +114,9 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
       adharNo: "",
       addedBy: "",
     })
+    setSalary("")
+    setSalaryType("fixed")
+    setPerTripRate("")
     setProfileImage(null)
     setLicenseImage(null)
     setAdharImage(null)
@@ -115,7 +133,7 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
 
   const handleAddDriverSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateAddDriverForm()) return
 
     setAddDriverLoading(true)
@@ -148,6 +166,37 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
       console.log("Response Data:", data)
 
       if (response.ok) {
+        const driverId = data?.driver?.id || data?.id || data?.driverId
+        const subAdminId = localStorage.getItem("id") || ""
+        if (driverId && subAdminId && (salary || perTripRate)) {
+          try {
+            const salaryPayload = {
+              salaryType: salaryType
+            }
+            if (salaryType === "fixed" && salary) {
+              salaryPayload.baseSalary = Number(salary)
+            } else if (salaryType === "per-trip" && perTripRate) {
+              salaryPayload.baseSalary = salary ? Number(salary) : 0
+              salaryPayload.perTripRate = Number(perTripRate)
+            }
+            const res2 = await fetch(`${baseURL}api/salary/${subAdminId}/${driverId}/set`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(salaryPayload),
+            })
+            if (!res2.ok) {
+              const err = await res2.json().catch(() => ({}))
+              toast.warning(err?.message || "Salary set failed")
+            } else {
+              toast.success("Salary set successfully")
+            }
+          } catch (e) {
+            toast.warning("Salary set failed")
+          }
+        }
         resetForm()
         onClose() // Close the modal
         onDriverAdded() // Refresh the driver list
@@ -173,7 +222,7 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm bg-opacity-50 p-4">
       <motion.div
-       className="bg-white rounded-lg w-full max-w-4xl shadow-xl max-h-[95vh] overflow-y-auto"
+        className="bg-white rounded-lg w-full max-w-4xl shadow-xl max-h-[95vh] overflow-y-auto"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
@@ -225,6 +274,54 @@ const AddDriver = ({ isOpen, onClose, onDriverAdded }) => {
                 )}
               </div>
             ))}
+
+            <div className="relative">
+              <label className="block text-sm font-medium mb-2 text-gray-700">Salary Type</label>
+              <select
+                className="w-full p-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                value={salaryType}
+                onChange={(e) => setSalaryType(e.target.value)}
+              >
+                <option value="fixed">Fixed Monthly Salary</option>
+                <option value="per-trip">Per Trip Salary</option>
+              </select>
+            </div>
+
+            {salaryType === "fixed" ? (
+              <div className="relative">
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Fixed Monthly Salary
+                </label>
+                <input
+                  type="number"
+                  placeholder="Enter Fixed Monthly Salary"
+                  className="w-full p-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  value={salary}
+                  onChange={(e) => setSalary(e.target.value)}
+                  min="0"
+                  step="0.01"
+                />
+                {addDriverErrors.salary && (
+                  <p className="text-red-500 text-sm mt-1">{addDriverErrors.salary}</p>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <label className="block text-sm font-medium mb-2 text-gray-700">Per Trip Rate</label>
+                <input
+                  type="number"
+                  placeholder="Enter Per Trip Rate"
+                  className="w-full p-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  value={perTripRate}
+                  onChange={(e) => setPerTripRate(e.target.value)}
+                  min="0"
+                  step="0.01"
+                />
+                {addDriverErrors.perTripRate && (
+                  <p className="text-red-500 text-sm mt-1">{addDriverErrors.perTripRate}</p>
+                )}
+              </div>
+            )}
 
             <div className="col-span-1 md:col-span-2">
               <label className="block text-sm font-medium mb-2 text-gray-700">

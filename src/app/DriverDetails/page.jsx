@@ -53,6 +53,9 @@ const Driver = () => {
   const [licenseImageName, setLicenseImageName] = useState('');
   const [adharImageName, setAdharImageName] = useState('');
   const [drivers, setDrivers] = useState([])
+  const [salaries, setSalaries] = useState({})
+  const [salaryTypes, setSalaryTypes] = useState({})
+  const [perTripRates, setPerTripRates] = useState({})
   const [loading, setLoading] = useState(true)
   const [selectedDriver, setSelectedDriver] = useState(null)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -63,6 +66,9 @@ const Driver = () => {
     adharNo: "",
     licenseNo: "",
     phone: "",
+    salary: "",
+    salaryType: "fixed",
+    perTripRate: "",
   })
   const [errors, setErrors] = useState({})
 
@@ -131,6 +137,7 @@ const Driver = () => {
 
   const fetchDrivers = async () => {
     const token = localStorage.getItem("token")
+    const subAdminId = localStorage.getItem("id")
     if (!token) {
       toast.error("Authentication token missing!")
       return
@@ -141,7 +148,41 @@ const Driver = () => {
       const res = await axios.get(`${baseURL}api/driver/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      setDrivers(res.data)
+      const driverList = res.data || []
+      setDrivers(driverList)
+      
+      // Fetch salary for each driver
+      const salaryData = {}
+      const salaryTypeData = {}
+      const perTripRateData = {}
+      for (const driver of driverList) {
+        try {
+          const salaryRes = await axios.get(`${baseURL}api/salary/${subAdminId}/${driver.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (salaryRes.data) {
+            salaryData[driver.id] = salaryRes.data.baseSalary || 0
+            salaryTypeData[driver.id] = salaryRes.data.salaryType || 'fixed'
+            perTripRateData[driver.id] = salaryRes.data.perTripRate || 0
+          }
+        } catch (err) {
+          // Silently handle 404 errors for drivers without salary records
+          if (err.response?.status === 404) {
+            salaryData[driver.id] = 0
+            salaryTypeData[driver.id] = 'fixed'
+            perTripRateData[driver.id] = 0
+          } else {
+            // Log other errors but don't show toast
+            console.warn(`Could not fetch salary for driver ${driver.id}:`, err.response?.status)
+            salaryData[driver.id] = 0
+            salaryTypeData[driver.id] = 'fixed'
+            perTripRateData[driver.id] = 0
+          }
+        }
+      }
+      setSalaries(salaryData)
+      setSalaryTypes(salaryTypeData)
+      setPerTripRates(perTripRateData)
     } catch (error) {
       console.error("Error fetching driver data:", error)
       toast.error("There is no any driver data .")
@@ -151,8 +192,34 @@ const Driver = () => {
   }
 
   // Edit driver handlers
-  const handleEdit = (driver) => {
-    setEditFormData({ ...driver })
+  const handleEdit = async (driver) => {
+    const token = localStorage.getItem("token")
+    const subAdminId = localStorage.getItem("id")
+    
+    // Fetch current salary details
+    let salaryType = 'fixed'
+    let perTripRate = ''
+    let baseSalary = salaries[driver.id] || 0
+    
+    try {
+      const salaryRes = await axios.get(`${baseURL}api/salary/${subAdminId}/${driver.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (salaryRes.data) {
+        salaryType = salaryRes.data.salaryType || 'fixed'
+        perTripRate = salaryRes.data.perTripRate || ''
+        baseSalary = salaryRes.data.baseSalary || 0
+      }
+    } catch (err) {
+      console.error('Error fetching salary details:', err)
+    }
+    
+    setEditFormData({ 
+      ...driver,
+      salary: baseSalary,
+      salaryType: salaryType,
+      perTripRate: perTripRate
+    })
     setIsEditMode(true)
     setSelectedDriver(driver)
     setErrors({})
@@ -177,12 +244,6 @@ const Driver = () => {
   const handleEditSubmit = async () => {
     // Validate edit form
     const newErrors = {}
-    // if (!editFormData.phone.trim()) newErrors.phone = "Phone is required"
-    // else if (!/^\d{10}$/.test(editFormData.phone)) newErrors.phone = "Phone must be 10 digits"
-    // if (!editFormData.adharNo.trim()) newErrors.adharNo = "Aadhar No is required"
-    // else if (!/^\d{12}$/.test(editFormData.adharNo)) newErrors.adharNo = "Aadhar must be 12 digits"
-    // if (!editFormData.licenseNo.trim()) newErrors.licenseNo = "License No is required"
-    // else if (!/^[A-Za-z0-9]{16}$/.test(editFormData.licenseNo)) newErrors.licenseNo = "License must be 16 characters (letters and numbers)"
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -190,9 +251,40 @@ const Driver = () => {
     }
 
     try {
+      // Update driver details
       await axios.put(`${baseURL}api/driver/profile/${editFormData.id}`, editFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
+
+      // Update salary if changed
+      const token = localStorage.getItem("token")
+      const subAdminId = localStorage.getItem("id")
+      if (editFormData.salary || editFormData.perTripRate) {
+        try {
+          const salaryPayload = {
+            salaryType: editFormData.salaryType
+          }
+          
+          if (editFormData.salaryType === 'fixed') {
+            salaryPayload.baseSalary = Number(editFormData.salary) || 0
+          } else {
+            salaryPayload.baseSalary = Number(editFormData.salary) || 0
+            salaryPayload.perTripRate = Number(editFormData.perTripRate) || 0
+          }
+          
+          await axios.post(`${baseURL}api/salary/${subAdminId}/${editFormData.id}/set`, 
+            salaryPayload,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          // Update local salary state
+          setSalaries(prev => ({ ...prev, [editFormData.id]: Number(editFormData.salary) || 0 }))
+          setSalaryTypes(prev => ({ ...prev, [editFormData.id]: editFormData.salaryType }))
+          setPerTripRates(prev => ({ ...prev, [editFormData.id]: Number(editFormData.perTripRate) || 0 }))
+        } catch (err) {
+          console.error('Error updating salary:', err)
+          toast.warning('Driver updated but salary update failed')
+        }
+      }
 
       setDrivers((prevDrivers) => prevDrivers.map((d) => (d.id === editFormData.id ? editFormData : d)))
 
@@ -389,7 +481,7 @@ const Driver = () => {
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">Profile</th>
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">Driver Name</th>
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">Email</th>
-                    <th className="p-4 text-left text-sm font-semibold text-gray-700">Aadhar No</th>
+                    <th className="p-4 text-left text-sm font-semibold text-gray-700">Salary</th>
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">Adhar Image</th>
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">License</th>
                     <th className="p-4 text-left text-sm font-semibold text-gray-700">License Image</th>
@@ -413,7 +505,15 @@ const Driver = () => {
                       </td>
                       <td className="p-4 text-gray-900 font-medium">{driver.name}</td>
                       <td className="p-4 text-gray-600">{driver.email}</td>
-                      <td className="p-4 text-gray-600">{driver.adharNo}</td>
+                      <td className="p-4 text-gray-900 font-semibold whitespace-nowrap">
+                        ₹ {salaryTypes[driver.id] === 'per-trip' 
+                          ? (perTripRates[driver.id] ? (Number(perTripRates[driver.id]) % 1 === 0 ? Number(perTripRates[driver.id]).toFixed(0) : Number(perTripRates[driver.id]).toFixed(2)) : '0')
+                          : (salaries[driver.id] ? (Number(salaries[driver.id]) % 1 === 0 ? Number(salaries[driver.id]).toFixed(0) : Number(salaries[driver.id]).toFixed(2)) : '0')
+                        }
+                        <span className="text-xs text-gray-500 ml-1">
+                          {salaryTypes[driver.id] === 'per-trip' ? '/trip' : '/month'}
+                        </span>
+                      </td>
                       <td className="p-4">
                         <Image
                           src={driver.adharNoImage || "/images/default-driver.jpg"}
@@ -480,16 +580,24 @@ const Driver = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-gray-500 font-medium">Aadhar No</p>
-                      <p className="text-gray-900">{driver.adharNo}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 font-medium">License</p>
-                      <p className="text-gray-900">{driver.licenseNo}</p>
+                      <p className="text-gray-500 font-medium">Salary</p>
+                      <p className="text-gray-900 font-semibold whitespace-nowrap">
+                        ₹ {salaryTypes[driver.id] === 'per-trip' 
+                          ? (perTripRates[driver.id] ? (Number(perTripRates[driver.id]) % 1 === 0 ? Number(perTripRates[driver.id]).toFixed(0) : Number(perTripRates[driver.id]).toFixed(2)) : '0')
+                          : (salaries[driver.id] ? (Number(salaries[driver.id]) % 1 === 0 ? Number(salaries[driver.id]).toFixed(0) : Number(salaries[driver.id]).toFixed(2)) : '0')
+                        }
+                        <span className="text-xs text-gray-500 ml-1">
+                          {salaryTypes[driver.id] === 'per-trip' ? '/trip' : '/month'}
+                        </span>
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500 font-medium">Contact</p>
                       <p className="text-gray-900">{driver.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium">License</p>
+                      <p className="text-gray-900">{driver.licenseNo}</p>
                     </div>
                   </div>
                   <div className="flex justify-between mt-4">
@@ -602,10 +710,54 @@ const Driver = () => {
                       onChange={(e) => setEditFormData({ ...editFormData, [field]: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                       disabled={disabled}
+                      min={type === "number" ? "0" : undefined}
+                      step={type === "number" ? "0.01" : undefined}
                     />
                     {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
                   </div>
                 ))}
+                
+                {/* Salary Type Selector */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Salary Type</label>
+                  <select
+                    value={editFormData.salaryType || "fixed"}
+                    onChange={(e) => setEditFormData({ ...editFormData, salaryType: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  >
+                    <option value="fixed">Fixed Monthly Salary</option>
+                    <option value="per-trip">Per Trip Salary</option>
+                  </select>
+                </div>
+
+                {/* Conditional Salary Fields */}
+                {editFormData.salaryType === "fixed" ? (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">Fixed Monthly Salary</label>
+                    <input
+                      type="number"
+                      value={editFormData.salary || ""}
+                      onChange={(e) => setEditFormData({ ...editFormData, salary: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors.salary && <p className="text-red-500 text-sm mt-1">{errors.salary}</p>}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">Per Trip Rate</label>
+                    <input
+                      type="number"
+                      value={editFormData.perTripRate || ""}
+                      onChange={(e) => setEditFormData({ ...editFormData, perTripRate: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors.perTripRate && <p className="text-red-500 text-sm mt-1">{errors.perTripRate}</p>}
+                  </div>
+                )}
               </div>
               <div className="mt-6 flex justify-end gap-3">
                 <button

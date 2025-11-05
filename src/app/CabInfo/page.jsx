@@ -131,16 +131,30 @@ const CabSearch = () => {
 
       const result = await response.json()
 
+      // Update both cabDetails and filteredCabs with the new status
       setCabDetails((prevDetails) =>
-        prevDetails.map((item) => (item.id === assignmentId ? { ...item, status: result.assignment.status } : item)),
+        prevDetails.map((item) => 
+          item.id === assignmentId 
+            ? { ...item, status: 'completed' } 
+            : item
+        ),
       )
 
       setFilteredCabs((prevFiltered) =>
-        prevFiltered.map((item) => (item.id === assignmentId ? { ...item, status: result.assignment.status } : item)),
+        prevFiltered.map((item) => 
+          item.id === assignmentId 
+            ? { ...item, status: 'completed' } 
+            : item
+        ),
       )
 
       setNotification("Trip completed successfully!")
       setTimeout(() => setNotification(""), 3000)
+      
+      // Refetch the current page to ensure data consistency
+      setTimeout(() => {
+        handlePageChange(currentPage)
+      }, 500)
     } catch (error) {
       console.error("Error completing trip:", error)
       setError("Failed to complete trip. Please try again.")
